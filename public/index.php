@@ -12,6 +12,10 @@ require $srcDir . '/Templates.php';
 require $srcDir . '/Auth.php';
 require $srcDir . '/Router.php';
 require $srcDir . '/AiService.php';
+require $srcDir . '/AiContentTools.php';
+require $srcDir . '/AiAnalysisTools.php';
+require $srcDir . '/AiStrategyTools.php';
+require $srcDir . '/AiChatService.php';
 require $srcDir . '/MediaLibrary.php';
 require $srcDir . '/Analytics.php';
 require $srcDir . '/Webhooks.php';
@@ -90,8 +94,16 @@ $ai = new AiService(
         'anthropic_model'  => env_value('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514') ?? 'claude-sonnet-4-20250514',
         'gemini_api_key'   => env_value('GEMINI_API_KEY'),
         'gemini_model'     => env_value('GEMINI_MODEL', 'gemini-2.5-flash') ?? 'gemini-2.5-flash',
+        'banana_api_key'   => env_value('BANANA_API_KEY'),
+        'banana_base_url'  => env_value('BANANA_BASE_URL', 'https://api.banana.dev') ?? 'https://api.banana.dev',
+        'banana_model_id'  => env_value('BANANA_MODEL_ID', '') ?? '',
     ],
 );
+
+$contentTools  = new AiContentTools($ai);
+$analysisTools = new AiAnalysisTools($ai);
+$strategyTools = new AiStrategyTools($ai);
+$chatService   = new AiChatService($ai, $pdo);
 
 $activeBrand = $brandProfiles->getActive();
 if ($activeBrand && method_exists($ai, 'setBrandVoice')) {
@@ -326,7 +338,7 @@ if (str_starts_with($path, '/api/')) {
     register_rss_routes($router, $rssFetcher);
     register_webhook_routes($router, $webhooks);
     register_cron_routes($router, $scheduler);
-    register_ai_routes($router, $ai, $aiLogs, $analytics, $posts, $campaigns);
+    register_ai_routes($router, $ai, $contentTools, $analysisTools, $strategyTools, $chatService, $aiLogs, $analytics, $posts, $campaigns, $pdo);
     register_utm_routes($router, $utmBuilder, $linkShortener);
     register_link_routes($router, $linkShortener);
     register_landing_page_routes($router, $landingPages);

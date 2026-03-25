@@ -137,6 +137,16 @@ export function init() {
             document.getElementById('aiCalendarGoal')?.focus();
           }, 100);
           break;
+        case 'chat':
+          navigate('chat');
+          break;
+        case 'standup':
+          navigate('ai');
+          setTimeout(() => {
+            document.querySelector('.ai-cat-btn[data-ai-cat="analytics"]')?.click();
+            document.getElementById('runStandup')?.click();
+          }, 100);
+          break;
         default:
           navigate('ai');
       }

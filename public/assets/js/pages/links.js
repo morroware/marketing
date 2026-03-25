@@ -8,6 +8,44 @@ import { toast } from '../core/toast.js';
 export function init() {
   $('utmForm')?.addEventListener('submit', handleUtmCreate);
   $('shortLinkForm')?.addEventListener('submit', handleShortCreate);
+
+  // AI Smart UTM
+  const aiUtmBtn = $('aiSmartUtm');
+  if (aiUtmBtn) {
+    aiUtmBtn.addEventListener('click', async () => {
+      const form = $('utmForm');
+      if (!form) return;
+      const campaignName = form.querySelector('[name="campaign_name"]')?.value || '';
+      const baseUrl = form.querySelector('[name="base_url"]')?.value || '';
+      if (!campaignName || !baseUrl) { toast('Enter campaign name and URL first', 'error'); return; }
+
+      aiUtmBtn.classList.add('loading'); aiUtmBtn.disabled = true;
+      try {
+        const { item } = await api('/api/ai/smart-utm', {
+          method: 'POST',
+          body: JSON.stringify({
+            campaign_name: campaignName,
+            url: baseUrl,
+            channel: form.querySelector('[name="utm_source"]')?.value || '',
+            description: form.querySelector('[name="utm_content"]')?.value || '',
+          }),
+        });
+        if (item?.utm) {
+          const u = item.utm;
+          const fill = (name, val) => { const el = form.querySelector(`[name="${name}"]`); if (el && val) el.value = val; };
+          fill('utm_source', u.utm_source);
+          fill('utm_medium', u.utm_medium);
+          fill('utm_campaign', u.utm_campaign);
+          fill('utm_term', u.utm_term);
+          fill('utm_content', u.utm_content);
+          toast('UTM parameters auto-filled by AI', 'success');
+        } else {
+          toast('Could not parse AI suggestions', 'error');
+        }
+      } catch (err) { toast(err.message, 'error'); }
+      finally { aiUtmBtn.classList.remove('loading'); aiUtmBtn.disabled = false; }
+    });
+  }
 }
 
 export async function refresh() {

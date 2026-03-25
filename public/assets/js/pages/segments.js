@@ -113,4 +113,35 @@ export function init() {
   onClick('closeSegmentModal', () => {
     $('segmentModal')?.classList.remove('visible');
   });
+
+  // AI Smart Segmentation
+  onClick('aiSmartSegments', async () => {
+    const btn = $('aiSmartSegments');
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    try {
+      const { item } = await api('/api/ai/smart-segments', { method: 'POST', body: '{}' });
+      const card = $('smartSegmentsCard');
+      const list = $('smartSegmentsList');
+      if (!card || !list) return;
+
+      if (item?.segments && Array.isArray(item.segments)) {
+        list.innerHTML = item.segments.map((s) => `<div class="card mb-1">
+          <div class="flex-between">
+            <strong>${escapeHtml(s.name || '')}</strong>
+            <span class="badge badge-${s.priority === 'high' ? 'danger' : s.priority === 'medium' ? 'warning' : 'info'}">${escapeHtml(s.priority || '')}</span>
+          </div>
+          <p class="text-small text-muted">${escapeHtml(s.description || '')}</p>
+          <p class="text-small"><strong>Estimated size:</strong> ${escapeHtml(s.estimated_size || '')}</p>
+          <p class="text-small"><strong>Action:</strong> ${escapeHtml(s.recommended_action || '')}</p>
+        </div>`).join('');
+        card.classList.remove('hidden');
+        card.scrollIntoView({ behavior: 'smooth' });
+        success(`${item.segments.length} segment suggestions generated`);
+      } else {
+        list.innerHTML = `<pre class="ai-output">${escapeHtml(item?.raw || 'No suggestions')}</pre>`;
+        card.classList.remove('hidden');
+      }
+    } catch (err) { error(err.message); }
+    finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  });
 }
