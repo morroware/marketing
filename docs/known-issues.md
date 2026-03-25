@@ -257,6 +257,78 @@ A catalog of identified issues, limitations, and improvement recommendations org
 
 ---
 
+## Frontend Issues
+
+### 25. Potential XSS in Email Template Preview
+
+**Location:** `public/assets/js/pages/email.js`
+
+**Description:** The email template preview uses `iframe srcdoc` with only quote escaping (`replace(/"/g, '&quot;')`). Malicious HTML in templates could execute scripts within the preview context.
+
+**Recommendation:** Sanitize template HTML server-side or use a sandboxed iframe with CSP restrictions.
+
+---
+
+### 26. Duplicated `esc()` Utility Function
+
+**Location:** `contacts.js`, `forms.js`, `landing.js`, `abtests.js`, `funnels.js`, `links.js`, `automations.js`, `rss.js`
+
+**Description:** An `esc()` HTML escaping function is defined locally in 8+ page modules despite `escapeHtml()` already existing in `core/utils.js`.
+
+**Recommendation:** Remove duplicate definitions and import `escapeHtml` from `utils.js`.
+
+---
+
+### 27. Silent Error Handling in Multiple Modules
+
+**Location:** `contacts.js`, `analytics.js`, `funnels.js`, `automations.js`, `rss.js`
+
+**Description:** Several page modules have empty or silent `catch` blocks. When API calls fail, users receive no feedback.
+
+**Recommendation:** Add `error(err.message)` toast notifications in all catch blocks.
+
+---
+
+### 28. Global Window Function Exposure
+
+**Location:** `contacts.js` (`window._deleteContact`, `window._viewContact`, etc.)
+
+**Description:** Several modules expose internal functions on `window` for use in inline `onclick` handlers. This pollutes the global namespace and could cause naming conflicts.
+
+**Recommendation:** Use event delegation instead of inline onclick handlers with global functions.
+
+---
+
+### 29. No Client-Side Pagination
+
+**Location:** All list/table views across page modules
+
+**Description:** All data is loaded at once with no pagination. Large datasets (thousands of posts, contacts, etc.) will cause performance degradation and slow page rendering.
+
+**Recommendation:** Implement server-side pagination with `limit` and `offset` parameters.
+
+---
+
+### 30. Alert/Confirm Dialogs for Complex Output
+
+**Location:** `content.js` (pre-flight, predict), `abtests.js` (AI analyze), `funnels.js`
+
+**Description:** Several features use `alert()` and `confirm()` to display detailed AI analysis output. These are blocking, unstyled, and poor UX on mobile.
+
+**Recommendation:** Replace with modal dialogs for rich content display.
+
+---
+
+### 31. Hardcoded Platform Lists in Frontend
+
+**Location:** `content.js`, `landing.js`, `email.js`, `social.js`
+
+**Description:** Platform options (Twitter, LinkedIn, Instagram, etc.) are hardcoded in multiple JS modules and HTML. Adding a new platform requires changes in multiple files.
+
+**Recommendation:** Serve platform configuration from the backend and populate dropdowns dynamically.
+
+---
+
 ## Architectural Limitations
 
 ### Single-Server Design
