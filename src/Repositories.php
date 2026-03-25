@@ -136,7 +136,7 @@ final class PostRepository
     {
         $fields = [];
         $params = [':id' => $id];
-        foreach (['campaign_id', 'platform', 'content_type', 'title', 'body', 'cta', 'tags', 'scheduled_for', 'status', 'ai_score', 'recurrence', 'is_evergreen', 'media_id'] as $col) {
+        foreach (['campaign_id', 'platform', 'content_type', 'title', 'body', 'cta', 'tags', 'scheduled_for', 'status', 'ai_score', 'recurrence', 'is_evergreen', 'media_id', 'approval_status', 'approved_by', 'approved_at', 'review_notes'] as $col) {
             if (array_key_exists($col, $data)) {
                 $fields[] = "{$col} = :{$col}";
                 $params[":{$col}"] = $data[$col];

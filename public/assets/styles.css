@@ -751,6 +751,27 @@ label {
 .metric-success .metric-value { color: var(--success); }
 .metric-info .metric-value { color: var(--accent); }
 
+/* ---- Funnel Visualization ---- */
+.funnel-viz { padding: 0.5rem 0; }
+.funnel-stage { margin-bottom: 0.5rem; }
+
+/* ---- Sidebar nav sections ---- */
+.sidebar-nav a .nav-icon {
+  display: inline-flex;
+  width: 1.4rem;
+  justify-content: center;
+}
+
+/* ---- Sidebar scrollbar ---- */
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+/* ---- Sidebar compact for many items ---- */
+.sidebar-nav a {
+  padding: 0.42rem 1.1rem;
+  font-size: 0.85rem;
+}
+
 /* ---- Print ---- */
 @media print {
   .sidebar, .header-bar, .bulk-bar, .toast-container, form, button, .filters { display: none !important; }

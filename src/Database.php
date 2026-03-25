@@ -263,6 +263,191 @@ final class Database
             created_at TEXT NOT NULL
         )');
 
+        /* ---- Phase 5: UTM links, link shortener, landing pages, contacts, forms, A/B tests, funnels, automations ---- */
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS utm_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            campaign_name TEXT NOT NULL,
+            base_url TEXT NOT NULL,
+            utm_source TEXT NOT NULL,
+            utm_medium TEXT NOT NULL,
+            utm_campaign TEXT NOT NULL,
+            utm_term TEXT DEFAULT "",
+            utm_content TEXT DEFAULT "",
+            full_url TEXT NOT NULL,
+            short_code TEXT,
+            clicks INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        )');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS short_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL UNIQUE,
+            destination_url TEXT NOT NULL,
+            title TEXT DEFAULT "",
+            clicks INTEGER DEFAULT 0,
+            utm_link_id INTEGER,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(utm_link_id) REFERENCES utm_links(id)
+        )');
+        $this->pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_short_links_code ON short_links(code)');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS link_clicks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            link_type TEXT NOT NULL,
+            link_id INTEGER NOT NULL,
+            ip_hash TEXT DEFAULT "",
+            user_agent TEXT DEFAULT "",
+            referer TEXT DEFAULT "",
+            country TEXT DEFAULT "",
+            clicked_at TEXT NOT NULL
+        )');
+        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_link_clicks_type_id ON link_clicks(link_type, link_id)');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS landing_pages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            template TEXT DEFAULT "blank",
+            status TEXT NOT NULL DEFAULT "draft",
+            meta_title TEXT DEFAULT "",
+            meta_description TEXT DEFAULT "",
+            hero_heading TEXT DEFAULT "",
+            hero_subheading TEXT DEFAULT "",
+            hero_cta_text TEXT DEFAULT "",
+            hero_cta_url TEXT DEFAULT "",
+            body_html TEXT DEFAULT "",
+            custom_css TEXT DEFAULT "",
+            form_id INTEGER,
+            campaign_id INTEGER,
+            views INTEGER DEFAULT 0,
+            conversions INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT,
+            FOREIGN KEY(form_id) REFERENCES forms(id),
+            FOREIGN KEY(campaign_id) REFERENCES campaigns(id)
+        )');
+        $this->pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_landing_pages_slug ON landing_pages(slug)');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS contacts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            first_name TEXT DEFAULT "",
+            last_name TEXT DEFAULT "",
+            company TEXT DEFAULT "",
+            phone TEXT DEFAULT "",
+            source TEXT DEFAULT "manual",
+            source_detail TEXT DEFAULT "",
+            stage TEXT DEFAULT "lead",
+            score INTEGER DEFAULT 0,
+            tags TEXT DEFAULT "",
+            notes TEXT DEFAULT "",
+            custom_fields TEXT DEFAULT "{}",
+            last_activity TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )');
+        $this->pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_email ON contacts(email)');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS contact_activities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            contact_id INTEGER NOT NULL,
+            activity_type TEXT NOT NULL,
+            description TEXT DEFAULT "",
+            data_json TEXT DEFAULT "{}",
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(contact_id) REFERENCES contacts(id)
+        )');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS forms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            fields TEXT NOT NULL DEFAULT "[]",
+            submit_label TEXT DEFAULT "Submit",
+            success_message TEXT DEFAULT "Thank you!",
+            redirect_url TEXT DEFAULT "",
+            notification_email TEXT DEFAULT "",
+            list_id INTEGER,
+            tag_on_submit TEXT DEFAULT "",
+            status TEXT NOT NULL DEFAULT "active",
+            submissions INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(list_id) REFERENCES email_lists(id)
+        )');
+        $this->pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_forms_slug ON forms(slug)');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS form_submissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            form_id INTEGER NOT NULL,
+            contact_id INTEGER,
+            data_json TEXT NOT NULL DEFAULT "{}",
+            ip_hash TEXT DEFAULT "",
+            page_url TEXT DEFAULT "",
+            submitted_at TEXT NOT NULL,
+            FOREIGN KEY(form_id) REFERENCES forms(id),
+            FOREIGN KEY(contact_id) REFERENCES contacts(id)
+        )');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ab_tests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            test_type TEXT NOT NULL DEFAULT "content",
+            status TEXT NOT NULL DEFAULT "running",
+            metric TEXT DEFAULT "clicks",
+            notes TEXT DEFAULT "",
+            started_at TEXT NOT NULL,
+            ended_at TEXT,
+            winner_variant TEXT,
+            created_at TEXT NOT NULL
+        )');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ab_variants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            test_id INTEGER NOT NULL,
+            variant_name TEXT NOT NULL,
+            content TEXT DEFAULT "",
+            impressions INTEGER DEFAULT 0,
+            conversions INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(test_id) REFERENCES ab_tests(id)
+        )');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS funnels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT "",
+            campaign_id INTEGER,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(campaign_id) REFERENCES campaigns(id)
+        )');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS funnel_stages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            funnel_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            stage_order INTEGER NOT NULL DEFAULT 0,
+            target_count INTEGER DEFAULT 0,
+            actual_count INTEGER DEFAULT 0,
+            conversion_rate REAL DEFAULT 0,
+            color TEXT DEFAULT "#4c8dff",
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(funnel_id) REFERENCES funnels(id)
+        )');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS automation_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            trigger_event TEXT NOT NULL,
+            conditions TEXT DEFAULT "{}",
+            action_type TEXT NOT NULL,
+            action_config TEXT DEFAULT "{}",
+            is_active INTEGER DEFAULT 1,
+            run_count INTEGER DEFAULT 0,
+            last_run TEXT,
+            created_at TEXT NOT NULL
+        )');
+
         /* ---- safe column additions for upgrades ---- */
 
         $this->applySafeAlter('campaigns', 'start_date', 'TEXT');
@@ -277,6 +462,10 @@ final class Database
         $this->applySafeAlter('posts', 'recurring_parent_id', 'INTEGER');
         $this->applySafeAlter('posts', 'is_evergreen', 'INTEGER DEFAULT 0');
         $this->applySafeAlter('posts', 'media_id', 'INTEGER');
+        $this->applySafeAlter('posts', 'approval_status', 'TEXT DEFAULT "none"');
+        $this->applySafeAlter('posts', 'approved_by', 'TEXT');
+        $this->applySafeAlter('posts', 'approved_at', 'TEXT');
+        $this->applySafeAlter('posts', 'review_notes', 'TEXT DEFAULT ""');
     }
 
     private function applySafeAlter(string $table, string $column, string $type): void
