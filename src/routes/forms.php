@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-function register_form_routes(Router $router, FormRepository $forms, ContactRepository $contacts, AutomationRepository $automations): void
+function register_form_routes(Router $router, FormRepository $forms, ContactRepository $contacts, AutomationRepository $automations, ?Auth $auth = null): void
 {
     $router->get('/api/forms', fn() => json_response($forms->all()));
 
@@ -47,7 +47,12 @@ function register_form_routes(Router $router, FormRepository $forms, ContactRepo
     });
 
     // Public submission endpoint (no CSRF required - handled separately)
-    $router->post('/api/forms/{slug}/submit', function (array $params) use ($forms, $contacts, $automations) {
+    $router->post('/api/forms/{slug}/submit', function (array $params) use ($forms, $contacts, $automations, $auth) {
+        // Rate limit public form submissions to prevent spam
+        if ($auth && !$auth->rateLimit('form_submit', 10, 60)) {
+            json_response(['error' => 'Too many submissions. Please try again later.'], 429);
+            return;
+        }
         $form = $forms->findBySlug($params['slug']);
         if (!$form) {
             json_response(['error' => 'Form not found'], 404);

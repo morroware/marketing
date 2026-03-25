@@ -16,7 +16,10 @@ function register_campaign_routes(Router $router, CampaignRepository $campaigns,
         json_response(['item' => $item], 201);
     });
 
-    $router->get('/api/campaigns/{id}', fn($p) => json_response(['item' => $campaigns->find((int)$p['id'])]));
+    $router->get('/api/campaigns/{id}', function ($p) use ($campaigns) {
+        $item = $campaigns->find((int)$p['id']);
+        $item ? json_response(['item' => $item]) : json_response(['error' => 'Not found'], 404);
+    });
 
     $router->put('/api/campaigns/{id}', function ($p) use ($campaigns) {
         $data = request_json();

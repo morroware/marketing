@@ -342,7 +342,7 @@ if (str_starts_with($path, '/api/')) {
     register_settings_routes($router, $ai, $scheduler, $dataDir, $pdo);
     register_dashboard_routes($router, $posts, $campaigns, $kpis, $aiLogs);
     register_campaign_routes($router, $campaigns, $webhooks);
-    register_post_routes($router, $posts, $analytics, $webhooks);
+    register_post_routes($router, $posts, $analytics, $webhooks, $pdo);
     register_competitor_routes($router, $competitors);
     register_kpi_routes($router, $kpis, $aiLogs);
     register_template_routes($router, $templates, $brandProfiles);
@@ -358,7 +358,7 @@ if (str_starts_with($path, '/api/')) {
     register_link_routes($router, $linkShortener);
     register_landing_page_routes($router, $landingPages);
     register_contact_routes($router, $contactRepo, $automations);
-    register_form_routes($router, $formRepo, $contactRepo, $automations);
+    register_form_routes($router, $formRepo, $contactRepo, $automations, $auth);
     register_ab_test_routes($router, $abTests);
     register_funnel_routes($router, $funnels);
     register_automation_routes($router, $automations);

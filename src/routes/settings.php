@@ -35,14 +35,21 @@ function register_settings_routes(Router $router, AiService $ai, Scheduler $sche
         ]);
     });
 
-    $router->post('/api/settings/backup', function () use ($dataDir) {
+    $router->post('/api/settings/backup', function () use ($dataDir, $pdo) {
         $dbFile = $dataDir . '/marketing.sqlite';
         if (!is_file($dbFile)) {
             json_response(['error' => 'Database not found'], 404);
             return;
         }
+        // Checkpoint WAL to ensure backup includes all committed data
+        try {
+            $pdo->exec('PRAGMA wal_checkpoint(TRUNCATE)');
+        } catch (\Throwable $e) {
+            // Non-fatal: backup proceeds even without checkpoint
+        }
         header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="marketing-backup-' . date('Y-m-d-His') . '.sqlite"');
+        $filename = str_replace(["\r", "\n", '"'], '', 'marketing-backup-' . date('Y-m-d-His') . '.sqlite');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . filesize($dbFile));
         readfile($dbFile);
     });
