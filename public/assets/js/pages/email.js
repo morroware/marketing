@@ -245,4 +245,62 @@ export function init() {
     // We need an existing campaign — for now just alert
     error('Save the campaign first, then use the Send Test button from the campaigns list');
   });
+
+  // AI generate email body
+  onClick('aiGenerateEmail', async () => {
+    const form = $('emailComposeForm');
+    if (!form) return;
+    const btn = $('aiGenerateEmail');
+    const subject = form.querySelector('[name="subject"]')?.value || 'marketing email';
+    const name = form.querySelector('[name="name"]')?.value || '';
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    try {
+      const { item } = await api('/api/ai/content', {
+        method: 'POST',
+        body: JSON.stringify({
+          content_type: 'email',
+          platform: 'email',
+          topic: subject,
+          tone: 'professional',
+          goal: name ? `Campaign: ${name}` : 'drive engagement',
+        }),
+      });
+      if (item?.content) {
+        const htmlField = form.querySelector('[name="body_html"]');
+        const textField = form.querySelector('[name="body_text"]');
+        if (htmlField) htmlField.value = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">${item.content.replace(/\n/g, '<br>')}</div>`;
+        if (textField) textField.value = item.content;
+        success('Email body generated with AI');
+      }
+    } catch (err) { error(err.message); }
+    finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  });
+
+  // AI generate subject lines
+  onClick('aiGenerateSubject', async () => {
+    const form = $('emailComposeForm');
+    if (!form) return;
+    const btn = $('aiGenerateSubject');
+    const name = form.querySelector('[name="name"]')?.value || '';
+    const body = form.querySelector('[name="body_text"]')?.value || '';
+    const topic = name || body?.slice(0, 100) || 'marketing';
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    try {
+      const { item } = await api('/api/ai/subject-lines', {
+        method: 'POST',
+        body: JSON.stringify({ topic, count: 5 }),
+      });
+      if (item?.subjects) {
+        // Extract first subject line
+        const lines = item.subjects.split('\n').filter((l) => l.trim());
+        const firstSubject = lines[0]?.replace(/^\d+[\.\)]\s*/, '').replace(/^["*]+|["*]+$/g, '').trim();
+        if (firstSubject) {
+          const subjectField = form.querySelector('[name="subject"]');
+          if (subjectField) subjectField.value = firstSubject.slice(0, 80);
+          success('Subject line generated (5 options in AI Studio)');
+        }
+      }
+    } catch (err) { error(err.message); }
+    finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  });
 }

@@ -7,6 +7,55 @@ import { toast } from '../core/toast.js';
 
 export function init() {
   $('landingPageForm')?.addEventListener('submit', handleCreate);
+
+  // AI Generate Landing Page Copy
+  const aiBtn = document.getElementById('aiGenerateLanding');
+  if (aiBtn) {
+    aiBtn.addEventListener('click', async () => {
+      const form = $('landingPageForm');
+      if (!form) return;
+      const title = form.querySelector('[name="title"]')?.value || '';
+      const heading = form.querySelector('[name="hero_heading"]')?.value || title;
+      if (!heading && !title) { toast('Enter a title or heading first', 'error'); return; }
+      aiBtn.classList.add('loading');
+      aiBtn.disabled = true;
+      try {
+        const resp = await api('/api/ai/content', {
+          method: 'POST',
+          body: JSON.stringify({
+            content_type: 'social_post',
+            platform: 'website',
+            topic: `Landing page for: ${heading || title}`,
+            tone: 'professional',
+            goal: 'Generate landing page copy including: hero heading, hero subheading, CTA text, and body content with value propositions and social proof sections. Format with HTML tags.',
+          }),
+        });
+        if (resp?.item?.content) {
+          const content = resp.item.content;
+          // Try to fill in the form fields
+          const headingField = form.querySelector('[name="hero_heading"]');
+          const subField = form.querySelector('[name="hero_subheading"]');
+          const bodyField = form.querySelector('[name="body_html"]');
+          const metaDesc = form.querySelector('[name="meta_description"]');
+
+          if (bodyField) bodyField.value = content;
+          if (!headingField?.value) {
+            const h1Match = content.match(/<h1[^>]*>(.*?)<\/h1>/i) || content.match(/^#\s*(.+)/m);
+            if (h1Match) headingField.value = h1Match[1].replace(/<[^>]*>/g, '').slice(0, 100);
+          }
+          if (!subField?.value) {
+            const subMatch = content.match(/<(?:p|h2)[^>]*>(.*?)<\/(?:p|h2)>/i);
+            if (subMatch) subField.value = subMatch[1].replace(/<[^>]*>/g, '').slice(0, 150);
+          }
+          if (!metaDesc?.value) {
+            metaDesc.value = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 155);
+          }
+          toast('Landing page copy generated with AI', 'success');
+        }
+      } catch (err) { toast(err.message, 'error'); }
+      finally { aiBtn.classList.remove('loading'); aiBtn.disabled = false; }
+    });
+  }
 }
 
 export async function refresh() {

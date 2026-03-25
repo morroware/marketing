@@ -69,4 +69,49 @@ export async function refresh() {
 export function init() {
   // Navigation buttons on dashboard
   window.navigate = navigate;
+
+  // AI Quick Action buttons on dashboard
+  document.querySelectorAll('.ai-quick-btn[data-quick-action]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.quickAction;
+      switch (action) {
+        case 'ideas':
+          navigate('ai');
+          // Switch to "Content Ideas" tool after nav
+          break;
+        case 'post':
+          navigate('content');
+          setTimeout(() => document.querySelector('[data-tab="content-create"]')?.click(), 100);
+          break;
+        case 'blog':
+          navigate('ai');
+          setTimeout(() => {
+            // Filter to creation category and scroll to blog tool
+            document.querySelector('.ai-cat-btn[data-ai-cat="creation"]')?.click();
+            document.getElementById('aiBlogTitle')?.focus();
+          }, 100);
+          break;
+        case 'email':
+          navigate('email');
+          setTimeout(() => document.querySelector('[data-tab="email-compose"]')?.click(), 100);
+          break;
+        case 'report':
+          navigate('ai');
+          setTimeout(() => {
+            document.querySelector('.ai-cat-btn[data-ai-cat="analytics"]')?.click();
+            document.getElementById('runWeeklyReport')?.click();
+          }, 100);
+          break;
+        case 'calendar':
+          navigate('ai');
+          setTimeout(() => {
+            document.querySelector('.ai-cat-btn[data-ai-cat="analytics"]')?.click();
+            document.getElementById('aiCalendarGoal')?.focus();
+          }, 100);
+          break;
+        default:
+          navigate('ai');
+      }
+    });
+  });
 }
