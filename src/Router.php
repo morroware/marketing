@@ -70,8 +70,13 @@ final class Router
 
         // regex match for parameterised routes
         foreach ($this->routes[$method] ?? [] as $pattern => $handler) {
-            $regex = preg_replace('#\{(\w+)\}#', '(?P<$1>[^/]+)', $pattern);
-            if (preg_match('#^' . $regex . '$#', $path, $matches)) {
+            // Escape the pattern for regex safety, then restore {param} placeholders
+            $escaped = preg_quote($pattern, '#');
+            $regex = preg_replace('#\\\\\\{(\\w+)\\\\\\}#', '(?P<$1>[^/]+)', $escaped);
+            if ($regex === $escaped) {
+                continue; // no params, already tried exact match above
+            }
+            if (preg_match('#^' . $regex . '$#D', $path, $matches)) {
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
                 $handler($params);
                 return true;

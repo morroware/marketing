@@ -26,7 +26,7 @@ $isCli = php_sapi_name() === 'cli';
 if (!$isCli) {
     $cronKey = env_value('CRON_KEY', '');
     $providedKey = $_GET['key'] ?? '';
-    if ($cronKey === '' || $providedKey !== $cronKey) {
+    if ($cronKey === '' || !hash_equals($cronKey, $providedKey)) {
         http_response_code(403);
         echo json_encode(['error' => 'Invalid cron key']);
         exit;
@@ -34,7 +34,16 @@ if (!$isCli) {
 }
 
 $dataDir = APP_ROOT . '/data';
-$db = new Database($dataDir . '/marketing.sqlite');
+$dbPath = $dataDir . '/marketing.sqlite';
+if (!is_file($dbPath)) {
+    $msg = 'Database not found. Run the installer first.';
+    if ($isCli) { echo $msg . "\n"; exit(1); }
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => $msg]);
+    exit;
+}
+$db = new Database($dbPath);
 $pdo = $db->pdo();
 
 // Optionally load SocialPublisher if available

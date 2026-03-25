@@ -241,6 +241,7 @@ input, textarea, select {
   font-family: inherit;
   width: 100%;
 }
+input[type="checkbox"], input[type="radio"] { width: auto; }
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--accent);
@@ -1421,6 +1422,6 @@ label {
 @media print {
   .sidebar, .header-bar, .bulk-bar, .toast-container, form, button, .filters { display: none !important; }
   .main-area { margin-left: 0 !important; }
-  .page { display: block !important; }
+  .page.active { display: block !important; }
   body { background: #fff; color: #000; }
 }

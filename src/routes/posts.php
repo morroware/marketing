@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-function register_post_routes(Router $router, PostRepository $posts, Analytics $analytics, Webhooks $webhooks): void
+function register_post_routes(Router $router, PostRepository $posts, Analytics $analytics, Webhooks $webhooks, ?PDO $pdo = null): void
 {
     $router->get('/api/posts', function () use ($posts) {
         $status = $_GET['status'] ?? null;
@@ -21,7 +21,10 @@ function register_post_routes(Router $router, PostRepository $posts, Analytics $
         json_response(['item' => $item], 201);
     });
 
-    $router->get('/api/posts/{id}', fn($p) => json_response(['item' => $posts->find((int)$p['id'])]));
+    $router->get('/api/posts/{id}', function ($p) use ($posts) {
+        $item = $posts->find((int)$p['id']);
+        $item ? json_response(['item' => $item]) : json_response(['error' => 'Not found'], 404);
+    });
 
     $router->patch('/api/posts/{id}', function ($p) use ($posts, $analytics, $webhooks) {
         $data = request_json();
@@ -91,15 +94,13 @@ function register_post_routes(Router $router, PostRepository $posts, Analytics $
     });
 
     // Content notes/comments
-    $router->get('/api/posts/{id}/notes', function ($p) use ($posts) {
-        global $pdo;
+    $router->get('/api/posts/{id}/notes', function ($p) use ($pdo) {
         $stmt = $pdo->prepare('SELECT * FROM content_notes WHERE post_id = :pid ORDER BY id DESC');
         $stmt->execute([':pid' => (int)$p['id']]);
         json_response(['items' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
     });
 
-    $router->post('/api/posts/{id}/notes', function ($p) use ($posts) {
-        global $pdo;
+    $router->post('/api/posts/{id}/notes', function ($p) use ($pdo) {
         $data = request_json();
         $pdo->prepare('INSERT INTO content_notes(post_id, author, note, created_at) VALUES(:pid,:a,:n,:c)')->execute([
             ':pid' => (int)$p['id'],
