@@ -49,6 +49,7 @@ async function loadFunnels() {
         </div>
         <div class="btn-group mt-1">
           <button class="btn btn-sm btn-outline" onclick="window._editFunnelStages(${f.id})">Edit Stages</button>
+          <button class="btn btn-sm btn-ai" onclick="window._aiFunnelAdvisor(${f.id})"><span class="btn-ai-icon">&#9733;</span> AI Advisor</button>
           <button class="btn btn-sm btn-danger" onclick="window._deleteFunnel(${f.id})">Delete</button>
         </div>
       </div>`;
@@ -110,6 +111,20 @@ window._editFunnelStages = async (id) => {
 window._deleteFunnel = async (id) => {
   if (!confirm('Delete this funnel?')) return;
   try { await api(`/api/funnels/${id}`, { method: 'DELETE' }); toast('Deleted', 'success'); refresh(); } catch (e) { toast(e.message, 'error'); }
+};
+
+window._aiFunnelAdvisor = async (id) => {
+  const card = document.getElementById('funnelAdvisorCard');
+  const output = document.getElementById('funnelAdvisorOutput');
+  if (card) card.classList.remove('hidden');
+  if (output) output.textContent = 'Analyzing funnel... please wait.';
+  try {
+    const { item } = await api('/api/ai/funnel-advisor', { method: 'POST', body: JSON.stringify({ funnel_id: id }) });
+    if (output) output.textContent = item?.advice || 'No advice available';
+    if (card) card.scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    if (output) output.textContent = 'Error: ' + e.message;
+  }
 };
 
 function esc(s) { return (s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }

@@ -3,8 +3,11 @@
  */
 
 import { api } from '../core/api.js';
-import { $, escapeHtml, formatDate, onSubmit, formData } from '../core/utils.js';
+import { $, escapeHtml, formatDate, onSubmit, formData, onClick } from '../core/utils.js';
 import { success, error } from '../core/toast.js';
+import { navigate } from '../core/router.js';
+
+let lastRssPost = '';
 
 async function refreshFeeds() {
   try {
@@ -62,9 +65,36 @@ async function refreshItems() {
           <td><a href="${escapeHtml(i.url)}" target="_blank" rel="noopener">${escapeHtml(i.title)}</a></td>
           <td>${escapeHtml(i.feed_name || '')}</td>
           <td>${formatDate(i.published_at)}</td>
-          <td></td>
+          <td><button class="btn btn-sm btn-ai" data-rss-post="${i.id}" data-rss-title="${escapeHtml(i.title)}" data-rss-summary="${escapeHtml(i.summary || '')}" data-rss-url="${escapeHtml(i.url || '')}"><span class="btn-ai-icon">&#9733;</span> AI Post</button></td>
         </tr>`).join('')
       : '<tr><td colspan="4" class="text-muted">No items</td></tr>';
+
+    // Wire AI Post buttons
+    table.querySelectorAll('[data-rss-post]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const title = btn.dataset.rssTitle || '';
+        const summary = btn.dataset.rssSummary || '';
+        const url = btn.dataset.rssUrl || '';
+        const platform = $('rssPostPlatform')?.value || 'twitter';
+
+        btn.classList.add('loading'); btn.disabled = true;
+        try {
+          const { item } = await api('/api/ai/rss-to-post', {
+            method: 'POST',
+            body: JSON.stringify({ title, summary, url, platform }),
+          });
+          lastRssPost = item?.post || '';
+          const modal = $('rssPostModal');
+          const output = $('rssPostOutput');
+          if (modal && output) {
+            output.textContent = lastRssPost;
+            modal.classList.add('visible');
+          }
+          success('Post generated from RSS item');
+        } catch (err) { error(err.message); }
+        finally { btn.classList.remove('loading'); btn.disabled = false; }
+      });
+    });
   } catch (err) {
     error('Failed to load RSS items: ' + err.message);
   }
@@ -83,4 +113,31 @@ export function init() {
       refresh();
     } catch (err) { error(err.message); }
   });
+
+  onClick('closeRssPostModal', () => $('rssPostModal')?.classList.remove('visible'));
+
+  onClick('rssPostCopy', () => {
+    if (!lastRssPost) return;
+    navigator.clipboard.writeText(lastRssPost).then(() => success('Copied')).catch(() => error('Copy failed'));
+  });
+
+  onClick('rssPostCreate', () => {
+    if (!lastRssPost) return;
+    sessionStorage.setItem('ai_generated_content', lastRssPost);
+    $('rssPostModal')?.classList.remove('visible');
+    navigate('content');
+    setTimeout(() => {
+      document.querySelector('[data-tab="content-create"]')?.click();
+      const bodyField = document.querySelector('#postForm [name="body"]');
+      if (bodyField) { bodyField.value = lastRssPost; success('RSS post loaded into content form'); }
+    }, 200);
+  });
+
+  // Re-generate when platform changes
+  const platformSelect = $('rssPostPlatform');
+  if (platformSelect) {
+    platformSelect.addEventListener('change', () => {
+      // User will need to click AI Post again from the table
+    });
+  }
 }

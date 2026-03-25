@@ -511,6 +511,28 @@ final class Database
             FOREIGN KEY(post_id) REFERENCES posts(id)
         )');
 
+        /* ---- Phase 7: AI chat conversations ---- */
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ai_chat_conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT DEFAULT "New conversation",
+            provider TEXT DEFAULT "",
+            model TEXT DEFAULT "",
+            message_count INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ai_chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            provider TEXT DEFAULT "",
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(conversation_id) REFERENCES ai_chat_conversations(id)
+        )');
+
         /* ---- safe column additions for upgrades ---- */
 
         $this->applySafeAlter('campaigns', 'start_date', 'TEXT');

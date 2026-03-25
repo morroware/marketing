@@ -381,6 +381,68 @@ export function init() {
     finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
   });
 
+  // AI Pre-Flight Check on post
+  onClick('aiPreflightPost', async () => {
+    const form = $('postForm');
+    if (!form) return;
+    const btn = $('aiPreflightPost');
+    const content = form.querySelector('[name="body"]')?.value || '';
+    const platform = form.querySelector('[name="platform"]')?.value || 'instagram';
+    if (!content) { error('Write some content first'); return; }
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    try {
+      const { item } = await api('/api/ai/preflight', {
+        method: 'POST',
+        body: JSON.stringify({ content, platform }),
+      });
+      const review = item?.review;
+      if (review) {
+        const statusEmoji = review.status === 'approved' ? '✅' : review.status === 'needs_revision' ? '⚠️' : '❌';
+        success(`Pre-Flight: ${statusEmoji} ${review.status} (Score: ${review.overall_score}/100)`);
+        if (review.summary) alert(`Pre-Flight Check: ${review.status}\nScore: ${review.overall_score}/100\n\n${review.summary}`);
+      } else {
+        success('Pre-flight check complete — see AI Studio for details');
+      }
+    } catch (err) { error(err.message); }
+    finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  });
+
+  // AI Performance Predictor on post
+  onClick('aiPredictPost', async () => {
+    const form = $('postForm');
+    if (!form) return;
+    const btn = $('aiPredictPost');
+    const content = form.querySelector('[name="body"]')?.value || '';
+    const platform = form.querySelector('[name="platform"]')?.value || 'instagram';
+    const scheduledTime = form.querySelector('[name="scheduled_for"]')?.value || null;
+    if (!content) { error('Write some content first'); return; }
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    try {
+      const { item } = await api('/api/ai/predict', {
+        method: 'POST',
+        body: JSON.stringify({ content, platform, scheduled_time: scheduledTime }),
+      });
+      const pred = item?.prediction;
+      if (pred) {
+        success(`Publish Confidence: ${pred.confidence_score}/100`);
+        const details = [
+          `Confidence Score: ${pred.confidence_score}/100`,
+          `Timing Score: ${pred.timing_score}/100`,
+          pred.timing_suggestion ? `Better time: ${pred.timing_suggestion}` : '',
+          '',
+          'Strengths: ' + (pred.strengths || []).join(', '),
+          'Weaknesses: ' + (pred.weaknesses || []).join(', '),
+          '',
+          'Tips: ' + (pred.optimization_tips || []).join('; '),
+        ].filter(Boolean).join('\n');
+        alert(details);
+      } else {
+        success('Prediction complete');
+      }
+    } catch (err) { error(err.message); }
+    finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  });
+
   // Check for AI-generated content from AI Studio "Use in Post"
   const stored = sessionStorage.getItem('ai_generated_content');
   if (stored) {

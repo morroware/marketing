@@ -77,6 +77,7 @@ async function loadTests() {
         </div>
         <div class="btn-group mt-1">
           ${t.status === 'running' ? `<button class="btn btn-sm btn-outline" onclick="window._completeTest(${t.id})">Complete Test</button>` : ''}
+          <button class="btn btn-sm btn-ai" onclick="window._aiAnalyzeTest(${t.id})"><span class="btn-ai-icon">&#9733;</span> AI Analyze</button>
           <button class="btn btn-sm btn-danger" onclick="window._deleteTest(${t.id})">Delete</button>
         </div>
       </div>`;
@@ -127,5 +128,22 @@ window._deleteTest = async (id) => {
   if (!confirm('Delete this test?')) return;
   try { await api(`/api/ab-tests/${id}`, { method: 'DELETE' }); toast('Deleted', 'success'); refresh(); } catch (e) { toast(e.message, 'error'); }
 };
+
+window._aiAnalyzeTest = async (id) => {
+  try {
+    const { item } = await api('/api/ai/ab-analyze', { method: 'POST', body: JSON.stringify({ test_id: id }) });
+    if (item?.analysis) {
+      alert(item.analysis.slice(0, 2000));
+    }
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+// AI Analyze button in the form area
+const aiAnalyzeBtn = document.getElementById('aiAnalyzeAb');
+if (aiAnalyzeBtn) {
+  aiAnalyzeBtn.addEventListener('click', () => {
+    toast('Select a test from the list below and click "AI Analyze" on it', 'info');
+  });
+}
 
 function esc(s) { return (s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }

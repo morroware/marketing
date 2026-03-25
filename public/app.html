@@ -37,6 +37,7 @@
         </button>
         <div class="nav-section-items" id="nav-ai-tools">
           <a href="#ai" data-page="ai"><span class="nav-icon">&#9733;</span> AI Studio</a>
+          <a href="#chat" data-page="chat"><span class="nav-icon">&#128172;</span> AI Chat</a>
           <a href="#content" data-page="content"><span class="nav-icon">&#9998;</span> Content Studio</a>
           <a href="#templates" data-page="templates"><span class="nav-icon">&#9881;</span> Content Library</a>
           <a href="#queue" data-page="queue"><span class="nav-icon">&#9200;</span> Publish Queue</a>
@@ -267,6 +268,8 @@
               <button type="button" class="btn btn-ai btn-sm" id="aiGenerateTitle" title="AI-generate post title"><span class="btn-ai-icon">&#9733;</span> AI Title</button>
               <button type="button" class="btn btn-ai btn-sm" id="aiGenerateHashtags" title="AI-generate hashtags"><span class="btn-ai-icon">&#9733;</span> AI Hashtags</button>
               <button type="button" class="btn btn-ai btn-sm" id="aiScorePost" title="Score this post with AI"><span class="btn-ai-icon">&#9733;</span> AI Score</button>
+              <button type="button" class="btn btn-ai btn-sm" id="aiPreflightPost" title="Pre-flight check before publishing"><span class="btn-ai-icon">&#9733;</span> Pre-Flight</button>
+              <button type="button" class="btn btn-ai btn-sm" id="aiPredictPost" title="Predict engagement performance"><span class="btn-ai-icon">&#9733;</span> Predict</button>
             </div>
           </form>
         </div>
@@ -565,6 +568,110 @@
                 <button class="btn btn-ai w-full" id="runCampaignOptimizer"><span class="btn-ai-icon">&#9733;</span> Optimize Campaign</button>
               </div>
             </div>
+            <!-- TIER 1: Content Workflow Engine -->
+            <div class="ai-tool-card" data-ai-cat="creation">
+              <div class="ai-tool-header"><span class="ai-tool-icon">&#128640;</span><h3>Content Workflow</h3></div>
+              <p class="ai-tool-desc">One topic &rarr; full week of blog + social + email + ads across all platforms</p>
+              <div class="stack">
+                <input id="aiWorkflowTopic" placeholder="Topic or theme for the week" />
+                <input id="aiWorkflowGoal" placeholder="Goal (e.g., launch product, drive signups)" />
+                <div class="flex flex-wrap gap-1"><label><input type="checkbox" class="workflow-platform" value="instagram" checked /> Instagram</label><label><input type="checkbox" class="workflow-platform" value="twitter" checked /> Twitter</label><label><input type="checkbox" class="workflow-platform" value="linkedin" checked /> LinkedIn</label><label><input type="checkbox" class="workflow-platform" value="email" checked /> Email</label><label><input type="checkbox" class="workflow-platform" value="facebook" /> Facebook</label><label><input type="checkbox" class="workflow-platform" value="tiktok" /> TikTok</label></div>
+                <select id="aiWorkflowDays"><option value="7">7 days</option><option value="5">5 days</option><option value="14">14 days</option></select>
+                <button class="btn btn-ai w-full" id="runWorkflow"><span class="btn-ai-icon">&#9733;</span> Generate Full Workflow</button>
+              </div>
+            </div>
+
+            <!-- TIER 1: Brand Voice Auto-Builder -->
+            <div class="ai-tool-card" data-ai-cat="optimization">
+              <div class="ai-tool-header"><span class="ai-tool-icon">&#127908;</span><h3>Brand Voice Builder</h3></div>
+              <p class="ai-tool-desc">Paste 3-5 content examples &rarr; AI builds your complete brand voice profile</p>
+              <div class="stack">
+                <textarea id="aiBrandExamples" rows="5" placeholder="Paste 3-5 examples of your existing content here. Separate each with a blank line."></textarea>
+                <button class="btn btn-ai w-full" id="runBrandVoice"><span class="btn-ai-icon">&#9733;</span> Build Brand Voice</button>
+                <button class="btn btn-outline btn-sm w-full hidden" id="saveBrandVoice">Save as Brand Profile</button>
+              </div>
+            </div>
+
+            <!-- TIER 2: Email Drip Sequence -->
+            <div class="ai-tool-card" data-ai-cat="creation">
+              <div class="ai-tool-header"><span class="ai-tool-icon">&#128231;</span><h3>Email Drip Sequence</h3></div>
+              <p class="ai-tool-desc">Full 5-7 email sequence with subject lines, body, timing, and branching</p>
+              <div class="stack">
+                <input id="aiDripGoal" placeholder="Goal (e.g., onboard new users, nurture leads)" />
+                <input id="aiDripAudience" placeholder="Target audience" />
+                <select id="aiDripCount"><option value="5">5 emails</option><option value="7">7 emails</option><option value="3">3 emails</option></select>
+                <button class="btn btn-ai w-full" id="runDripSequence"><span class="btn-ai-icon">&#9733;</span> Generate Sequence</button>
+              </div>
+            </div>
+
+            <!-- TIER 2: Multi-Language Localization -->
+            <div class="ai-tool-card" data-ai-cat="creation">
+              <div class="ai-tool-header"><span class="ai-tool-icon">&#127760;</span><h3>Content Localization</h3></div>
+              <p class="ai-tool-desc">Translate &amp; culturally adapt content for any language — not just translation</p>
+              <div class="stack">
+                <textarea id="aiLocalizeContent" rows="3" placeholder="Paste content to localize..."></textarea>
+                <select id="aiLocalizeLanguage"><option value="Spanish">Spanish</option><option value="French">French</option><option value="German">German</option><option value="Portuguese">Portuguese</option><option value="Japanese">Japanese</option><option value="Chinese (Simplified)">Chinese</option><option value="Arabic">Arabic</option><option value="Hindi">Hindi</option><option value="Korean">Korean</option><option value="Italian">Italian</option></select>
+                <select id="aiLocalizePlatform"><option>instagram</option><option>twitter</option><option>linkedin</option><option>facebook</option><option>email</option></select>
+                <button class="btn btn-ai w-full" id="runLocalize"><span class="btn-ai-icon">&#9733;</span> Localize Content</button>
+              </div>
+            </div>
+
+            <!-- TIER 2: Performance Predictor -->
+            <div class="ai-tool-card" data-ai-cat="analytics">
+              <div class="ai-tool-header"><span class="ai-tool-icon">&#128200;</span><h3>Performance Predictor</h3></div>
+              <p class="ai-tool-desc">Predict engagement score (1-100) before publishing — "Publish Confidence" meter</p>
+              <div class="stack">
+                <textarea id="aiPredictContent" rows="3" placeholder="Paste content to predict performance..."></textarea>
+                <select id="aiPredictPlatform"><option>instagram</option><option>twitter</option><option>linkedin</option><option>facebook</option><option>tiktok</option><option>email</option></select>
+                <input id="aiPredictTime" type="datetime-local" />
+                <button class="btn btn-ai w-full" id="runPredict"><span class="btn-ai-icon">&#9733;</span> Predict Performance</button>
+              </div>
+            </div>
+
+            <!-- TIER 3: Image Prompt Generator + Generation -->
+            <div class="ai-tool-card" data-ai-cat="creation">
+              <div class="ai-tool-header"><span class="ai-tool-icon">&#127912;</span><h3>AI Image Studio</h3></div>
+              <p class="ai-tool-desc">Generate image prompts from content, then create images via Banana/DALL-E</p>
+              <div class="stack">
+                <textarea id="aiImageContent" rows="3" placeholder="Paste content to generate matching visuals for..."></textarea>
+                <div class="row2">
+                  <select id="aiImagePlatform"><option>instagram</option><option>facebook</option><option>twitter</option><option>linkedin</option><option>blog</option></select>
+                  <select id="aiImageStyle"><option value="modern">Modern/Clean</option><option value="vibrant">Vibrant/Bold</option><option value="minimal">Minimalist</option><option value="photorealistic">Photorealistic</option><option value="illustration">Illustration</option><option value="3d">3D Render</option></select>
+                </div>
+                <button class="btn btn-ai w-full" id="runImagePrompts"><span class="btn-ai-icon">&#9733;</span> Generate Image Prompts</button>
+                <div class="hidden" id="imageGenSection">
+                  <textarea id="aiImagePromptDirect" rows="2" placeholder="Or type a direct image prompt..."></textarea>
+                  <div class="row2">
+                    <select id="aiImageProvider"><option value="auto">Auto (Best available)</option><option value="banana">NanoBanana</option><option value="openai">DALL-E 3</option></select>
+                    <select id="aiImageSize"><option value="1024x1024">Square (1024x1024)</option><option value="1024x1792">Portrait (1024x1792)</option><option value="1792x1024">Landscape (1792x1024)</option></select>
+                  </div>
+                  <button class="btn btn-ai w-full" id="runGenerateImage"><span class="btn-ai-icon">&#9733;</span> Generate Image</button>
+                </div>
+                <div id="aiImagePreview" class="hidden" style="text-align:center;margin-top:8px"></div>
+              </div>
+            </div>
+
+            <!-- TIER 1: Pre-Flight Check -->
+            <div class="ai-tool-card" data-ai-cat="optimization">
+              <div class="ai-tool-header"><span class="ai-tool-icon">&#9989;</span><h3>Pre-Flight Check</h3></div>
+              <p class="ai-tool-desc">AI reviews content for brand consistency, tone, grammar, PR risks, and compliance</p>
+              <div class="stack">
+                <textarea id="aiPreflightContent" rows="3" placeholder="Paste content for pre-flight review..."></textarea>
+                <select id="aiPreflightPlatform"><option>instagram</option><option>twitter</option><option>linkedin</option><option>facebook</option><option>email</option><option>blog</option></select>
+                <button class="btn btn-ai w-full" id="runPreflight"><span class="btn-ai-icon">&#9733;</span> Run Pre-Flight Check</button>
+              </div>
+            </div>
+
+            <!-- TIER 3: Weekly Standup Digest -->
+            <div class="ai-tool-card" data-ai-cat="analytics">
+              <div class="ai-tool-header"><span class="ai-tool-icon">&#9749;</span><h3>Weekly Standup</h3></div>
+              <p class="ai-tool-desc">Monday morning briefing: last week results, this week plan, priority actions</p>
+              <div class="stack">
+                <p class="text-small text-muted">Auto-pulls your data: last week's performance, scheduled content, pending items, and generates a concise action briefing.</p>
+                <button class="btn btn-ai w-full" id="runStandup"><span class="btn-ai-icon">&#9733;</span> Generate Standup Digest</button>
+              </div>
+            </div>
+
           </div>
 
           <!-- AI Output Panel -->
@@ -581,6 +688,48 @@
             <pre class="ai-output" id="aiOutput">Select a tool and click generate to see AI output here.
 
 Tip: Use the provider selector above to compare results from different AI models, or select "All Providers" to run them simultaneously.</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- AI Chat -->
+      <section id="page-chat" class="page">
+        <div class="chat-layout">
+          <div class="chat-sidebar">
+            <button class="btn btn-ai w-full" id="newChatBtn"><span class="btn-ai-icon">&#9733;</span> New Chat</button>
+            <div class="chat-model-select mt-1">
+              <select id="chatProviderSelect">
+                <option value="">Default Provider</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic Claude</option>
+                <option value="gemini">Google Gemini</option>
+              </select>
+              <select id="chatModelSelect" class="mt-1">
+                <option value="">Default Model</option>
+              </select>
+            </div>
+            <div id="chatConversationList" class="chat-conversations mt-1"></div>
+          </div>
+          <div class="chat-main">
+            <div class="chat-messages" id="chatMessages">
+              <div class="chat-welcome">
+                <div class="chat-welcome-icon">&#9733;</div>
+                <h3>AI Marketing Assistant</h3>
+                <p class="text-muted">Ask me anything about your marketing data, or have me create content.</p>
+                <div class="chat-suggestions">
+                  <button class="chat-suggest-btn" data-suggest="What was my best performing platform this month?">Best performing platform?</button>
+                  <button class="chat-suggest-btn" data-suggest="Write me 3 Instagram posts about our latest product">Write 3 Instagram posts</button>
+                  <button class="chat-suggest-btn" data-suggest="Analyze my campaign performance and suggest improvements">Analyze campaigns</button>
+                  <button class="chat-suggest-btn" data-suggest="What content should I create this week?">Content ideas for this week</button>
+                  <button class="chat-suggest-btn" data-suggest="Give me a summary of my email marketing performance">Email performance summary</button>
+                  <button class="chat-suggest-btn" data-suggest="How are my funnels performing? Where are the biggest drop-offs?">Funnel analysis</button>
+                </div>
+              </div>
+            </div>
+            <div class="chat-input-area">
+              <textarea id="chatInput" rows="2" placeholder="Ask about your marketing data, or request content creation..." autofocus></textarea>
+              <button class="btn btn-ai" id="chatSendBtn"><span class="btn-ai-icon">&#9733;</span> Send</button>
+            </div>
           </div>
         </div>
       </section>
@@ -674,7 +823,9 @@ Tip: Use the provider selector above to compare results from different AI models
           <div class="row2"><div><label>Recent Activity</label><textarea name="recent_activity" rows="2"></textarea></div><div><label>Opportunity</label><textarea name="opportunity" rows="2"></textarea></div></div>
           <div class="btn-group"><button type="submit">Add Competitor</button><button type="button" class="btn btn-ai btn-sm" id="aiAnalyzeCompetitor" title="AI-analyze this competitor"><span class="btn-ai-icon">&#9733;</span> AI Deep Dive</button></div>
         </form>
+        <div class="btn-group mt-1"><button class="btn btn-ai" id="runCompetitorRadar"><span class="btn-ai-icon">&#9733;</span> AI Competitor Radar (All)</button></div>
         <div id="competitorList" class="card-grid mt-1"></div>
+        <div class="card mt-1 hidden" id="competitorRadarCard"><h3><span class="btn-ai-icon">&#9733;</span> Competitor Content Radar</h3><pre class="ai-output" id="competitorRadarOutput" style="max-height:400px;overflow:auto"></pre></div>
       </section>
 
       <!-- SEO Tools -->
@@ -729,6 +880,16 @@ Tip: Use the provider selector above to compare results from different AI models
         </form>
         <div id="rssFeedList" class="mt-1"></div>
         <div class="card mt-1"><h3>Recent Items</h3><div class="table-wrap"><table class="data-table"><thead><tr><th>Title</th><th>Source</th><th>Date</th><th>Actions</th></tr></thead><tbody id="rssItemTable"></tbody></table></div></div>
+        <!-- RSS to Post Modal -->
+        <div class="modal-overlay" id="rssPostModal">
+          <div class="modal-content"><div class="modal-header"><h3>AI: Turn into Post</h3><button class="modal-close" id="closeRssPostModal">&times;</button></div>
+            <div class="modal-body stack">
+              <select id="rssPostPlatform"><option>twitter</option><option>linkedin</option><option>instagram</option><option>facebook</option></select>
+              <div id="rssPostOutput" class="ai-output" style="min-height:100px;max-height:300px;overflow:auto"></div>
+              <div class="btn-group"><button class="btn btn-sm" id="rssPostCopy">Copy</button><button class="btn btn-sm btn-ai" id="rssPostCreate">Create as Post</button></div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Contacts (mini CRM) -->
@@ -776,7 +937,7 @@ Tip: Use the provider selector above to compare results from different AI models
             <div class="row3"><div><label>Source *</label><input name="utm_source" required placeholder="facebook" /></div><div><label>Medium *</label><input name="utm_medium" required placeholder="social" /></div><div><label>Campaign *</label><input name="utm_campaign" required placeholder="spring_sale" /></div></div>
             <div class="row2"><div><label>Term</label><input name="utm_term" placeholder="running shoes" /></div><div><label>Content</label><input name="utm_content" placeholder="banner_v1" /></div></div>
             <div class="flex"><label><input type="checkbox" name="create_short_link" value="1" checked /> Also create short link</label></div>
-            <button type="submit">Build UTM Link</button>
+            <div class="btn-group"><button type="submit">Build UTM Link</button><button type="button" class="btn btn-ai btn-sm" id="aiSmartUtm"><span class="btn-ai-icon">&#9733;</span> AI Smart UTM</button></div>
           </form>
           <div id="utmResult" class="card mt-1 hidden">
             <h3>Generated Link</h3>
@@ -854,7 +1015,7 @@ Tip: Use the provider selector above to compare results from different AI models
             <div class="row2 mt-1"><div><label>Variant A Name</label><input name="variant_a_name" value="Control" /></div><div><label>Variant A Content</label><textarea name="variant_a_content" rows="2"></textarea></div></div>
             <div class="row2 mt-1"><div><label>Variant B Name</label><input name="variant_b_name" value="Variation" /></div><div><label>Variant B Content</label><textarea name="variant_b_content" rows="2"></textarea></div></div>
           </div>
-          <div class="btn-group"><button type="submit">Create Test</button><button type="button" class="btn btn-ai btn-sm" id="aiGenerateVariant" title="AI-generate A/B test variants"><span class="btn-ai-icon">&#9733;</span> AI Variants</button></div>
+          <div class="btn-group"><button type="submit">Create Test</button><button type="button" class="btn btn-ai btn-sm" id="aiGenerateVariant" title="AI-generate A/B test variants"><span class="btn-ai-icon">&#9733;</span> AI Variants</button><button type="button" class="btn btn-ai btn-sm" id="aiAnalyzeAb" title="AI analyze test results"><span class="btn-ai-icon">&#9733;</span> AI Analyze</button></div>
         </form>
         <div id="abTestList" class="mt-1"></div>
       </section>
@@ -874,6 +1035,7 @@ Tip: Use the provider selector above to compare results from different AI models
           <button type="submit">Create Funnel</button>
         </form>
         <div id="funnelList" class="mt-1"></div>
+        <div class="card mt-1 hidden" id="funnelAdvisorCard"><h3><span class="btn-ai-icon">&#9733;</span> AI Funnel Advisor</h3><pre class="ai-output" id="funnelAdvisorOutput" style="max-height:400px;overflow:auto"></pre></div>
       </section>
 
       <!-- Automations -->
@@ -909,8 +1071,9 @@ Tip: Use the provider selector above to compare results from different AI models
             <div><label>Active Since</label><input name="criteria_has_activity_since" type="date" /></div>
             <div><label>Inactive Since</label><input name="criteria_no_activity_since" type="date" /></div>
           </div>
-          <button type="submit">Create Segment</button>
+          <div class="btn-group"><button type="submit">Create Segment</button><button type="button" class="btn btn-ai btn-sm" id="aiSmartSegments"><span class="btn-ai-icon">&#9733;</span> AI Suggest Segments</button></div>
         </form>
+        <div class="card mt-1 hidden" id="smartSegmentsCard"><h3><span class="btn-ai-icon">&#9733;</span> AI Suggested Segments</h3><div id="smartSegmentsList"></div></div>
         <div id="segmentList" class="card-grid mt-1"></div>
         <div class="modal-overlay" id="segmentModal">
           <div class="modal-content"><div class="modal-header"><h3 id="segmentModalTitle">Segment Contacts</h3><button class="modal-close" id="closeSegmentModal">&times;</button></div><div class="modal-body" id="segmentModalBody"></div></div>

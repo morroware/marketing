@@ -3,7 +3,7 @@
  */
 
 import { api } from '../core/api.js';
-import { $, escapeHtml, onSubmit, formData } from '../core/utils.js';
+import { $, escapeHtml, onSubmit, formData, onClick } from '../core/utils.js';
 import { success, error } from '../core/toast.js';
 
 export async function refresh() {
@@ -93,4 +93,22 @@ export function init() {
       finally { aiBtn.classList.remove('loading'); aiBtn.disabled = false; }
     });
   }
+
+  // AI Competitor Radar — analyze all competitors at once
+  onClick('runCompetitorRadar', async () => {
+    const btn = $('runCompetitorRadar');
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    try {
+      const { item } = await api('/api/ai/competitor-radar', { method: 'POST', body: '{}' });
+      const card = $('competitorRadarCard');
+      const output = $('competitorRadarOutput');
+      if (card && output) {
+        output.textContent = item?.radar || 'No data';
+        card.classList.remove('hidden');
+        card.scrollIntoView({ behavior: 'smooth' });
+      }
+      success('Competitor radar complete');
+    } catch (err) { error(err.message); }
+    finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  });
 }
