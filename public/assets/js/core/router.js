@@ -60,8 +60,41 @@ export function initRouter() {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       navigate(link.dataset.page);
+      // Close mobile sidebar
+      const sidebar = $('sidebar');
+      if (sidebar) sidebar.classList.remove('sidebar-open');
     });
   });
+
+  // Sidebar section toggles
+  document.querySelectorAll('.nav-section-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const section = btn.closest('.nav-section');
+      if (section) {
+        section.classList.toggle('collapsed');
+        // Save state
+        const key = 'nav_' + btn.dataset.section;
+        localStorage.setItem(key, section.classList.contains('collapsed') ? '1' : '0');
+      }
+    });
+    // Restore saved state
+    const key = 'nav_' + btn.dataset.section;
+    const saved = localStorage.getItem(key);
+    if (saved === '1') {
+      const section = btn.closest('.nav-section');
+      if (section) section.classList.add('collapsed');
+    }
+  });
+
+  // Auto-expand section containing active page
+  function expandActiveSection() {
+    const activePage = window.location.hash.replace('#', '') || 'dashboard';
+    const activeLink = document.querySelector(`.sidebar-nav a[data-page="${activePage}"]`);
+    if (activeLink) {
+      const section = activeLink.closest('.nav-section');
+      if (section) section.classList.remove('collapsed');
+    }
+  }
 
   // Tab switching
   document.querySelectorAll('.tab-btn[data-tab]').forEach((btn) => {
@@ -107,13 +140,140 @@ export function initRouter() {
     });
   }
 
+  // Global AI Command Bar
+  initAiCommandBar();
+
   // Hash change handler
   window.addEventListener('hashchange', () => {
     const page = window.location.hash.replace('#', '') || 'dashboard';
     showPage(page);
+    expandActiveSection();
   });
 
   // Initial page
   const initial = window.location.hash.replace('#', '') || 'dashboard';
   showPage(initial);
+  expandActiveSection();
+}
+
+function initAiCommandBar() {
+  const modal = $('aiCommandModal');
+  const input = $('aiCommandInput');
+  const globalBtn = $('globalAiBtn');
+  const suggestionsEl = modal?.querySelector('.ai-command-suggestions');
+  const outputEl = $('aiCommandOutput');
+
+  if (!modal || !input) return;
+
+  function openCommandBar() {
+    modal.classList.add('visible');
+    input.value = '';
+    input.focus();
+    if (suggestionsEl) suggestionsEl.classList.remove('hidden');
+    if (outputEl) outputEl.classList.add('hidden');
+  }
+
+  function closeCommandBar() {
+    modal.classList.remove('visible');
+  }
+
+  // Open with button or Ctrl+K
+  if (globalBtn) globalBtn.addEventListener('click', openCommandBar);
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      openCommandBar();
+    }
+    if (e.key === 'Escape' && modal.classList.contains('visible')) {
+      closeCommandBar();
+    }
+  });
+
+  // Close on overlay click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeCommandBar();
+  });
+
+  // Quick action buttons
+  modal.querySelectorAll('.ai-command-item').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.aiQuick;
+      const typeMap = {
+        social_post: { type: 'social_post', platform: 'instagram' },
+        blog_post: { type: 'blog_post', platform: 'blog' },
+        email: { type: 'email', platform: 'email' },
+        ad_copy: { type: 'ad_copy', platform: 'facebook' },
+        ideas: null,
+        strategy: null,
+      };
+
+      if (action === 'ideas' || action === 'strategy') {
+        closeCommandBar();
+        navigate('ai');
+        return;
+      }
+
+      const config = typeMap[action] || { type: 'social_post', platform: 'instagram' };
+      generateFromCommandBar(input.value || btn.textContent, config.type, config.platform);
+    });
+  });
+
+  // Enter key in command bar
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && input.value.trim()) {
+      generateFromCommandBar(input.value.trim(), 'social_post', 'instagram');
+    }
+  });
+
+  async function generateFromCommandBar(topic, contentType, platform) {
+    if (suggestionsEl) suggestionsEl.classList.add('hidden');
+    if (outputEl) outputEl.classList.remove('hidden');
+
+    const resultEl = $('aiCommandResult');
+    const metaEl = $('aiCommandMeta');
+    if (resultEl) resultEl.textContent = 'Generating...';
+    if (metaEl) metaEl.textContent = 'Working on it...';
+
+    try {
+      const { item } = await (await fetch('/api/ai/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || sessionStorage.getItem('csrf_token') || '' },
+        body: JSON.stringify({ content_type: contentType, platform, topic, tone: 'professional', goal: 'engage audience' }),
+      })).json();
+
+      if (item?.content) {
+        if (resultEl) resultEl.textContent = item.content;
+        if (metaEl) metaEl.textContent = `Provider: ${item.provider || 'default'}  |  ${new Date().toLocaleTimeString()}`;
+      }
+    } catch (err) {
+      if (resultEl) resultEl.textContent = 'Error: ' + err.message;
+    }
+  }
+
+  // Copy from command bar
+  const copyBtn = $('aiCommandCopy');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const text = $('aiCommandResult')?.textContent || '';
+      navigator.clipboard.writeText(text).catch(() => {});
+    });
+  }
+
+  // Use in post from command bar
+  const useBtn = $('aiCommandUsePost');
+  if (useBtn) {
+    useBtn.addEventListener('click', () => {
+      const text = $('aiCommandResult')?.textContent || '';
+      if (text) {
+        sessionStorage.setItem('ai_generated_content', text);
+        closeCommandBar();
+        navigate('content');
+        setTimeout(() => {
+          document.querySelector('[data-tab="content-create"]')?.click();
+          const bodyField = document.querySelector('#postForm [name="body"]');
+          if (bodyField) bodyField.value = text;
+        }, 200);
+      }
+    });
+  }
 }

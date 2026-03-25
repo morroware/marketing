@@ -239,9 +239,11 @@ export function init() {
   onClick('aiGenerateBody', async () => {
     const form = $('postForm');
     if (!form) return;
+    const btn = $('aiGenerateBody');
     const topic = form.querySelector('[name="title"]')?.value || 'marketing';
     const platform = form.querySelector('[name="platform"]')?.value || 'instagram';
     const contentType = form.querySelector('[name="content_type"]')?.value || 'social_post';
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
     try {
       const { item } = await api('/api/ai/content', {
         method: 'POST',
@@ -250,10 +252,107 @@ export function init() {
       const bodyField = form.querySelector('[name="body"]');
       if (bodyField && item?.content) {
         bodyField.value = item.content;
-        success('Content generated');
+        success('Content generated with AI');
       }
     } catch (err) {
       error(err.message);
+    } finally {
+      if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
     }
   });
+
+  // AI generate title
+  onClick('aiGenerateTitle', async () => {
+    const form = $('postForm');
+    if (!form) return;
+    const btn = $('aiGenerateTitle');
+    const body = form.querySelector('[name="body"]')?.value || '';
+    const platform = form.querySelector('[name="platform"]')?.value || 'instagram';
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    try {
+      const { item } = await api('/api/ai/content', {
+        method: 'POST',
+        body: JSON.stringify({
+          content_type: 'social_post',
+          platform,
+          topic: body ? 'Create a compelling title for this content: ' + body.slice(0, 200) : 'engaging marketing post',
+          tone: 'professional',
+          goal: 'Generate just a short, catchy title (under 80 chars)',
+        }),
+      });
+      const titleField = form.querySelector('[name="title"]');
+      if (titleField && item?.content) {
+        // Extract first line as title
+        const title = item.content.split('\n')[0].replace(/^["#*]+|["*]+$/g, '').trim().slice(0, 100);
+        titleField.value = title;
+        success('Title generated');
+      }
+    } catch (err) { error(err.message); }
+    finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  });
+
+  // AI generate hashtags
+  onClick('aiGenerateHashtags', async () => {
+    const form = $('postForm');
+    if (!form) return;
+    const btn = $('aiGenerateHashtags');
+    const topic = form.querySelector('[name="title"]')?.value || form.querySelector('[name="body"]')?.value?.slice(0, 100) || 'marketing';
+    const platform = form.querySelector('[name="platform"]')?.value || 'instagram';
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    try {
+      const { item } = await api('/api/ai/hashtags', {
+        method: 'POST',
+        body: JSON.stringify({ topic, platform }),
+      });
+      const tagsField = form.querySelector('[name="tags"]');
+      if (tagsField && item?.hashtags) {
+        // Extract hashtags from response
+        const hashtags = item.hashtags.match(/#\w+/g);
+        if (hashtags) {
+          tagsField.value = hashtags.slice(0, 15).join(' ');
+          success(`${hashtags.length} hashtags generated`);
+        } else {
+          tagsField.value = item.hashtags.slice(0, 200);
+          success('Hashtags generated');
+        }
+      }
+    } catch (err) { error(err.message); }
+    finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  });
+
+  // AI score post
+  onClick('aiScorePost', async () => {
+    const form = $('postForm');
+    if (!form) return;
+    const btn = $('aiScorePost');
+    const content = form.querySelector('[name="body"]')?.value || '';
+    const platform = form.querySelector('[name="platform"]')?.value || 'instagram';
+    if (!content) { error('Write some content first to score it'); return; }
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    try {
+      const { item } = await api('/api/ai/score', {
+        method: 'POST',
+        body: JSON.stringify({ content, platform }),
+      });
+      if (item?.score) {
+        // Try to extract numeric score
+        const scoreMatch = item.score.match(/(\d{1,3})\s*\/?\s*100|overall[:\s]*(\d{1,3})/i);
+        const scoreNum = scoreMatch ? parseInt(scoreMatch[1] || scoreMatch[2]) : null;
+        if (scoreNum) {
+          const scoreField = form.querySelector('[name="ai_score"]');
+          if (scoreField) scoreField.value = scoreNum;
+        }
+        // Show full score in an alert-like toast
+        success(`AI Score: ${scoreNum || 'See details'}. Check AI Studio for full breakdown.`);
+      }
+    } catch (err) { error(err.message); }
+    finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+  });
+
+  // Check for AI-generated content from AI Studio "Use in Post"
+  const stored = sessionStorage.getItem('ai_generated_content');
+  if (stored) {
+    sessionStorage.removeItem('ai_generated_content');
+    sessionStorage.removeItem('ai_generated_tool');
+  }
 }

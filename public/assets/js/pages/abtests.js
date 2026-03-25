@@ -7,6 +7,39 @@ import { toast } from '../core/toast.js';
 
 export function init() {
   $('abTestForm')?.addEventListener('submit', handleCreate);
+
+  // AI Generate A/B Test Variants
+  const aiBtn = document.getElementById('aiGenerateVariant');
+  if (aiBtn) {
+    aiBtn.addEventListener('click', async () => {
+      const form = $('abTestForm');
+      if (!form) return;
+      const name = form.querySelector('[name="name"]')?.value || '';
+      const testType = form.querySelector('[name="test_type"]')?.value || 'content';
+      const controlContent = form.querySelector('[name="variant_a_content"]')?.value || '';
+      if (!name && !controlContent) { toast('Enter a test name or control content first', 'error'); return; }
+      aiBtn.classList.add('loading');
+      aiBtn.disabled = true;
+      try {
+        const { item } = await api('/api/ai/ad-variations', {
+          method: 'POST',
+          body: JSON.stringify({
+            base_ad: controlContent || `${testType} for: ${name}`,
+            count: 2,
+          }),
+        });
+        if (item?.variations) {
+          // Fill variant B with the first AI variation
+          const varBContent = form.querySelector('[name="variant_b_content"]');
+          const varBName = form.querySelector('[name="variant_b_name"]');
+          if (varBContent) varBContent.value = item.variations.slice(0, 500);
+          if (varBName && varBName.value === 'Variation') varBName.value = 'AI Variation';
+          toast('AI variant generated', 'success');
+        }
+      } catch (err) { toast(err.message, 'error'); }
+      finally { aiBtn.classList.remove('loading'); aiBtn.disabled = false; }
+    });
+  }
 }
 
 export async function refresh() {

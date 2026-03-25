@@ -129,4 +129,35 @@ export function init() {
       error(err.message);
     }
   });
+
+  // AI campaign strategy
+  const stratBtn = document.getElementById('aiCampaignStrategy');
+  if (stratBtn) {
+    stratBtn.addEventListener('click', async () => {
+      const form = document.getElementById('campaignForm');
+      if (!form) return;
+      const objective = form.querySelector('[name="objective"]')?.value || '';
+      const channel = form.querySelector('[name="channel"]')?.value || '';
+      const name = form.querySelector('[name="name"]')?.value || '';
+      stratBtn.classList.add('loading');
+      stratBtn.disabled = true;
+      try {
+        const { item } = await api('/api/ai/social-strategy', {
+          method: 'POST',
+          body: JSON.stringify({
+            goals: objective || 'increase brand awareness and drive leads',
+            current_state: `Campaign: ${name}. Channel: ${channel}. Planning phase.`,
+          }),
+        });
+        if (item?.strategy) {
+          const notes = form.querySelector('[name="notes"]');
+          if (notes) {
+            notes.value = item.strategy.slice(0, 2000);
+            success('AI strategy generated and added to notes');
+          }
+        }
+      } catch (err) { error(err.message); }
+      finally { stratBtn.classList.remove('loading'); stratBtn.disabled = false; }
+    });
+  }
 }

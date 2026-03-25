@@ -50,4 +50,47 @@ export function init() {
       error(err.message);
     }
   });
+
+  // AI Deep Dive button for competitors
+  const aiBtn = document.getElementById('aiAnalyzeCompetitor');
+  if (aiBtn) {
+    aiBtn.addEventListener('click', async () => {
+      const form = document.getElementById('competitorForm');
+      if (!form) return;
+      const name = form.querySelector('[name="name"]')?.value || '';
+      const channel = form.querySelector('[name="channel"]')?.value || '';
+      const positioning = form.querySelector('[name="positioning"]')?.value || '';
+      if (!name) { error('Enter a competitor name first'); return; }
+      aiBtn.classList.add('loading');
+      aiBtn.disabled = true;
+      try {
+        const { item } = await api('/api/ai/competitor-analysis', {
+          method: 'POST',
+          body: JSON.stringify({
+            name,
+            notes: `Channel: ${channel}. Positioning: ${positioning}.`,
+          }),
+        });
+        if (item?.analysis) {
+          // Fill in the form fields with AI insights
+          const actField = form.querySelector('[name="recent_activity"]');
+          const oppField = form.querySelector('[name="opportunity"]');
+          const posField = form.querySelector('[name="positioning"]');
+          // Extract relevant sections from the analysis
+          const analysis = item.analysis;
+          if (posField && !posField.value) {
+            const posMatch = analysis.match(/positioning[:\s]*(.*?)(?:\n|$)/i);
+            if (posMatch) posField.value = posMatch[1].trim().slice(0, 200);
+          }
+          if (actField) actField.value = analysis.slice(0, 500);
+          if (oppField) {
+            const oppMatch = analysis.match(/opportunit(?:y|ies)[:\s]*([\s\S]*?)(?:\n\n|\d\.\s|$)/i);
+            if (oppMatch) oppField.value = oppMatch[1].trim().slice(0, 500);
+          }
+          success('AI competitor analysis complete');
+        }
+      } catch (err) { error(err.message); }
+      finally { aiBtn.classList.remove('loading'); aiBtn.disabled = false; }
+    });
+  }
 }

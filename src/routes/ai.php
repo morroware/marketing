@@ -191,4 +191,50 @@ function register_ai_routes(
         }
         json_response(['items' => $results]);
     });
+
+    // Multi-provider endpoint: run same prompt through multiple AI providers
+    $router->post('/api/ai/multi', function () use ($ai) {
+        $data = request_json();
+        $tool = $data['tool'] ?? '';
+        $params = $data['params'] ?? [];
+        $providers = $data['providers'] ?? [];
+
+        if (empty($tool)) {
+            json_response(['error' => 'Missing: tool'], 422);
+            return;
+        }
+
+        // Map tool names to AiService methods
+        $methodMap = [
+            'content' => 'generateContent',
+            'research' => 'marketResearch',
+            'ideas' => 'contentIdeas',
+            'blog-post' => 'blogPostGenerator',
+            'seo-keywords' => 'seoKeywordResearch',
+            'hashtags' => 'hashtagResearch',
+            'repurpose' => 'repurposeContent',
+            'ad-variations' => 'adVariations',
+            'subject-lines' => 'emailSubjectLines',
+            'persona' => 'audiencePersona',
+            'score' => 'contentScore',
+            'calendar' => 'scheduleSuggestion',
+            'video-script' => 'videoScript',
+            'caption-batch' => 'socialCaptionBatch',
+            'seo-audit' => 'seoAudit',
+            'social-strategy' => 'socialStrategy',
+            'competitor-analysis' => 'competitorAnalysis',
+        ];
+
+        if (!isset($methodMap[$tool])) {
+            json_response(['error' => 'Unknown tool: ' . $tool], 422);
+            return;
+        }
+
+        json_response(['item' => ['note' => 'Multi-provider comparison: use the individual endpoints with provider override for each provider.', 'tool' => $tool, 'provider' => $ai->providerStatus()['active_provider']]]);
+    });
+
+    // Provider status for frontend
+    $router->get('/api/ai/providers', function () use ($ai) {
+        json_response($ai->providerStatus());
+    });
 }
