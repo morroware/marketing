@@ -5,6 +5,7 @@ declare(strict_types=1);
 final class Auth
 {
     private PDO $pdo;
+    private ?array $cachedUser = null;
 
     public function __construct(PDO $pdo)
     {
@@ -21,6 +22,7 @@ final class Auth
                 'path' => '/',
                 'httponly' => true,
                 'samesite' => 'Lax',
+                'secure' => !empty($_SERVER['HTTPS']),
             ]);
             session_start();
         }
@@ -93,8 +95,10 @@ final class Auth
             return null;
         }
         $this->startSession();
+        session_regenerate_id(true);
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        $this->cachedUser = null;
         return $user;
     }
 
@@ -102,24 +106,40 @@ final class Auth
     {
         $this->startSession();
         $_SESSION = [];
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', [
+            'expires' => 1,
+            'path' => $params['path'],
+            'domain' => $params['domain'],
+            'secure' => $params['secure'],
+            'httponly' => $params['httponly'],
+            'samesite' => $params['samesite'] ?? 'Lax',
+        ]);
         session_destroy();
+        $this->cachedUser = null;
     }
 
     /* ---- auth check (session OR bearer token) ---- */
 
     public function currentUser(): ?array
     {
+        if ($this->cachedUser !== null) {
+            return $this->cachedUser;
+        }
+
         // try bearer token first (stateless API)
         $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         if (str_starts_with($header, 'Bearer ')) {
             $token = substr($header, 7);
-            return $this->findByToken($token);
+            $this->cachedUser = $this->findByToken($token);
+            return $this->cachedUser;
         }
 
         // fall back to session
         $this->startSession();
         if (!empty($_SESSION['user_id'])) {
-            return $this->findUser((int)$_SESSION['user_id']);
+            $this->cachedUser = $this->findUser((int)$_SESSION['user_id']);
+            return $this->cachedUser;
         }
 
         return null;

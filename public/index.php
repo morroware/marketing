@@ -82,21 +82,21 @@ $mediaLib  = new MediaLibrary($pdo, $dataDir);
 $scheduler = new Scheduler($pdo, class_exists('SocialPublisher') ? new SocialPublisher($pdo) : null, $dataDir);
 
 $ai = new AiService(
-    env_value('AI_PROVIDER', 'openai') ?? 'openai',
-    env_value('BUSINESS_NAME', 'My Small Business') ?? 'My Small Business',
-    env_value('BUSINESS_INDUSTRY', 'Local services') ?? 'Local services',
-    env_value('TIMEZONE', 'America/New_York') ?? 'America/New_York',
+    env_value('AI_PROVIDER', 'openai'),
+    env_value('BUSINESS_NAME', 'My Small Business'),
+    env_value('BUSINESS_INDUSTRY', 'Local services'),
+    env_value('TIMEZONE', 'America/New_York'),
     [
         'openai_api_key'   => env_value('OPENAI_API_KEY'),
-        'openai_base_url'  => env_value('OPENAI_BASE_URL', 'https://api.openai.com/v1') ?? 'https://api.openai.com/v1',
-        'openai_model'     => env_value('AI_MODEL', 'gpt-4.1-mini') ?? 'gpt-4.1-mini',
+        'openai_base_url'  => env_value('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+        'openai_model'     => env_value('AI_MODEL', 'gpt-4.1-mini'),
         'anthropic_api_key' => env_value('ANTHROPIC_API_KEY'),
-        'anthropic_model'  => env_value('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514') ?? 'claude-sonnet-4-20250514',
+        'anthropic_model'  => env_value('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
         'gemini_api_key'   => env_value('GEMINI_API_KEY'),
-        'gemini_model'     => env_value('GEMINI_MODEL', 'gemini-2.5-flash') ?? 'gemini-2.5-flash',
+        'gemini_model'     => env_value('GEMINI_MODEL', 'gemini-2.5-flash'),
         'banana_api_key'   => env_value('BANANA_API_KEY'),
-        'banana_base_url'  => env_value('BANANA_BASE_URL', 'https://api.banana.dev') ?? 'https://api.banana.dev',
-        'banana_model_id'  => env_value('BANANA_MODEL_ID', '') ?? '',
+        'banana_base_url'  => env_value('BANANA_BASE_URL', 'https://api.banana.dev'),
+        'banana_model_id'  => env_value('BANANA_MODEL_ID', ''),
     ],
 );
 
@@ -114,11 +114,11 @@ $emailService = null;
 if (class_exists('EmailService')) {
     $emailService = new EmailService($pdo, [
         'smtp_host'      => env_value('SMTP_HOST', ''),
-        'smtp_port'      => (int)(env_value('SMTP_PORT', '587') ?? '587'),
+        'smtp_port'      => (int)env_value('SMTP_PORT', '587'),
         'smtp_user'      => env_value('SMTP_USER', ''),
         'smtp_pass'      => env_value('SMTP_PASS', ''),
         'smtp_from'      => env_value('SMTP_FROM', ''),
-        'smtp_from_name' => env_value('SMTP_FROM_NAME', env_value('BUSINESS_NAME', '') ?? ''),
+        'smtp_from_name' => env_value('SMTP_FROM_NAME', env_value('BUSINESS_NAME', '')),
         'base_url'       => env_value('APP_URL', ''),
     ]);
 }
@@ -160,6 +160,11 @@ if ($path === '/api/track/click' && $method === 'GET') {
     $cid = (int)($_GET['c'] ?? 0);
     $sid = (int)($_GET['s'] ?? 0);
     $url = $_GET['url'] ?? '/';
+    // Prevent open redirect - only allow http/https URLs
+    if (!preg_match('#^https?://#i', $url)) {
+        $url = '/';
+    }
+    $url = str_replace(["\r", "\n"], '', $url);
     if ($cid && $sid && $emailService) {
         $emailService->trackClick($cid, $sid, $url);
     }
@@ -289,8 +294,15 @@ if (str_starts_with($path, '/api/')) {
         if (preg_match('#^/api/forms/[^/]+/submit$#', $path)) {
             return null;
         }
+        // When no users exist, only allow setup-related endpoints (not the entire API)
         if ($auth->userCount() === 0) {
-            return null;
+            $setupPaths = ['/api/setup-status', '/api/login', '/api/health', '/api/settings'];
+            if (in_array($path, $setupPaths, true) || str_starts_with($path, '/api/settings')) {
+                return null;
+            }
+            // Block all other endpoints until a user is created
+            json_response(['error' => 'Setup required - please create an admin account first'], 403);
+            return false;
         }
         $user = $auth->currentUser();
         if (!$user) {
@@ -313,8 +325,11 @@ if (str_starts_with($path, '/api/')) {
         if (preg_match('#^/api/forms/[^/]+/submit$#', $path)) {
             return null;
         }
+        // When no users exist, skip CSRF only for setup-related endpoints
         if ($auth->userCount() === 0) {
-            return null;
+            if (str_starts_with($path, '/api/settings') || $path === '/api/login') {
+                return null;
+            }
         }
         if (!$auth->verifyCsrf()) {
             json_response(['error' => 'CSRF token invalid'], 403);
@@ -363,10 +378,23 @@ if (str_starts_with($path, '/api/')) {
 
 /* ---- Static files ---- */
 $file = $path === '/' ? '/app.html' : $path;
+// Prevent path traversal in static file serving
+if (str_contains($file, '..')) {
+    http_response_code(403);
+    echo 'Forbidden';
+    return;
+}
 $publicFile = __DIR__ . $file;
 if (!is_file($publicFile)) {
     http_response_code(404);
     echo 'Not found';
+    return;
+}
+// Verify resolved path is within public directory
+$realPublicFile = realpath($publicFile);
+if (!$realPublicFile || !str_starts_with($realPublicFile, __DIR__ . '/')) {
+    http_response_code(403);
+    echo 'Forbidden';
     return;
 }
 

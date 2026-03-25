@@ -9,13 +9,14 @@ final class Database
     public function __construct(string $path)
     {
         if (!is_dir(dirname($path))) {
-            mkdir(dirname($path), 0777, true);
+            mkdir(dirname($path), 0750, true);
         }
 
         $this->pdo = new PDO('sqlite:' . $path);
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->pdo->exec('PRAGMA journal_mode=WAL');
         $this->pdo->exec('PRAGMA foreign_keys=ON');
+        $this->pdo->exec('PRAGMA busy_timeout=5000');
         $this->migrate();
     }
 

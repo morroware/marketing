@@ -27,7 +27,11 @@ function env_value(string $key, ?string $default = null): ?string
         $loaded = true;
     }
 
-    return $_ENV[$key] ?? getenv($key) ?: $default;
+    if (isset($_ENV[$key])) {
+        return $_ENV[$key];
+    }
+    $env = getenv($key);
+    return $env !== false ? $env : $default;
 }
 
 function json_response(array $payload, int $status = 200): void
@@ -51,6 +55,7 @@ function csv_response(string $csv, string $filename): void
 {
     http_response_code(200);
     header('Content-Type: text/csv');
+    $filename = str_replace(["\r", "\n", '"'], '', $filename);
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     echo $csv;
 }
@@ -76,6 +81,14 @@ function serve_upload(string $path, string $dataDir): void
     if (!is_file($file)) {
         http_response_code(404);
         echo 'Not found';
+        return;
+    }
+    // Prevent path traversal (e.g. /uploads/../../.env)
+    $real = realpath($file);
+    $uploadsRoot = realpath($dataDir . '/uploads');
+    if (!$real || !$uploadsRoot || !str_starts_with($real, $uploadsRoot . '/')) {
+        http_response_code(403);
+        echo 'Forbidden';
         return;
     }
 
