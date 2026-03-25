@@ -17,6 +17,13 @@ import * as templates from './pages/templates.js';
 import * as rss from './pages/rss.js';
 import * as seo from './pages/seo.js';
 import * as settings from './pages/settings.js';
+import * as contacts from './pages/contacts.js';
+import * as links from './pages/links.js';
+import * as landing from './pages/landing.js';
+import * as forms from './pages/forms.js';
+import * as abtests from './pages/abtests.js';
+import * as funnels from './pages/funnels.js';
+import * as automations from './pages/automations.js';
 
 // Register each page module with the SPA router
 registerPage('dashboard', dashboard);
@@ -31,6 +38,13 @@ registerPage('templates', templates);
 registerPage('rss', rss);
 registerPage('seo', seo);
 registerPage('settings', settings);
+registerPage('contacts', contacts);
+registerPage('links', links);
+registerPage('landing', landing);
+registerPage('forms', forms);
+registerPage('abtests', abtests);
+registerPage('funnels', funnels);
+registerPage('automations', automations);
 
 // Initialize all page modules (binds forms, click handlers, etc.)
 function initAll() {
@@ -46,6 +60,13 @@ function initAll() {
   rss.init();
   seo.init();
   settings.init();
+  contacts.init();
+  links.init();
+  landing.init();
+  forms.init();
+  abtests.init();
+  funnels.init();
+  automations.init();
 }
 
 // Boot sequence

@@ -22,6 +22,15 @@ if (is_file(__DIR__ . '/../src/EmailService.php')) {
     require __DIR__ . '/../src/EmailService.php';
 }
 
+require __DIR__ . '/../src/UtmBuilder.php';
+require __DIR__ . '/../src/LinkShortener.php';
+require __DIR__ . '/../src/LandingPages.php';
+require __DIR__ . '/../src/Contacts.php';
+require __DIR__ . '/../src/FormBuilder.php';
+require __DIR__ . '/../src/AbTesting.php';
+require __DIR__ . '/../src/Funnels.php';
+require __DIR__ . '/../src/Automations.php';
+
 security_headers();
 
 /* ---- Database & Repositories ---- */
@@ -43,6 +52,14 @@ $emailCampaigns = new EmailCampaignRepository($pdo);
 $analytics      = new Analytics($pdo);
 $webhooks       = new Webhooks($pdo);
 $rssFetcher     = new RssFetcher($pdo);
+$utmBuilder     = new UtmBuilder($pdo);
+$linkShortener  = new LinkShortener($pdo);
+$landingPages   = new LandingPageRepository($pdo);
+$contactRepo    = new ContactRepository($pdo);
+$formRepo       = new FormRepository($pdo);
+$abTests        = new AbTestRepository($pdo);
+$funnels        = new FunnelRepository($pdo);
+$automations    = new AutomationRepository($pdo);
 
 /* ---- Services ---- */
 $auth      = new Auth($pdo);
@@ -139,6 +156,59 @@ if ($path === '/api/unsubscribe' && $method === 'GET') {
     return;
 }
 
+// Short link redirect (e.g. /s/abc123)
+if (preg_match('#^/s/([a-zA-Z0-9]+)$#', $path, $m)) {
+    $link = $linkShortener->findByCode($m[1]);
+    if ($link) {
+        $linkShortener->recordClick((int)$link['id'], 'short_link', [
+            'ip_hash' => hash('sha256', $_SERVER['REMOTE_ADDR'] ?? ''),
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+            'referer' => $_SERVER['HTTP_REFERER'] ?? '',
+        ]);
+        // If linked to a UTM link, increment that too
+        if (!empty($link['utm_link_id'])) {
+            $utmBuilder->incrementClicks((int)$link['utm_link_id']);
+        }
+        header('Location: ' . $link['destination_url']);
+        http_response_code(302);
+    } else {
+        http_response_code(404);
+        echo 'Link not found';
+    }
+    return;
+}
+
+// Landing page rendering (e.g. /p/my-landing-page)
+if (preg_match('#^/p/([a-zA-Z0-9\-]+)$#', $path, $m)) {
+    $page = $landingPages->findBySlug($m[1]);
+    if ($page) {
+        $landingPages->incrementViews((int)$page['id']);
+        $form = null;
+        if (!empty($page['form_id'])) {
+            $form = $formRepo->find((int)$page['form_id']);
+        }
+        header('Content-Type: text/html');
+        echo $landingPages->render($page, $form);
+    } else {
+        http_response_code(404);
+        echo 'Page not found';
+    }
+    return;
+}
+
+// Embeddable form rendering (e.g. /f/contact-us)
+if (preg_match('#^/f/([a-zA-Z0-9\-]+)$#', $path, $m)) {
+    $form = $formRepo->findBySlug($m[1]);
+    if ($form) {
+        header('Content-Type: text/html');
+        echo $formRepo->renderStandalone($form);
+    } else {
+        http_response_code(404);
+        echo 'Form not found';
+    }
+    return;
+}
+
 // API routes
 if (str_starts_with($path, '/api/')) {
     $router = new Router();
@@ -163,6 +233,14 @@ if (str_starts_with($path, '/api/')) {
     require __DIR__ . '/../src/routes/webhooks_routes.php';
     require __DIR__ . '/../src/routes/cron.php';
     require __DIR__ . '/../src/routes/ai.php';
+    require __DIR__ . '/../src/routes/utm.php';
+    require __DIR__ . '/../src/routes/links.php';
+    require __DIR__ . '/../src/routes/landing_pages.php';
+    require __DIR__ . '/../src/routes/contacts.php';
+    require __DIR__ . '/../src/routes/forms.php';
+    require __DIR__ . '/../src/routes/ab_tests.php';
+    require __DIR__ . '/../src/routes/funnels.php';
+    require __DIR__ . '/../src/routes/automations.php';
 
     // Register public routes (before middleware)
     register_auth_routes($router, $auth);
@@ -171,6 +249,10 @@ if (str_starts_with($path, '/api/')) {
     $router->addMiddleware(function (string $method, string $path) use ($auth): ?bool {
         $public = ['/api/health', '/api/login', '/api/logout', '/api/setup-status'];
         if (in_array($path, $public, true)) {
+            return null;
+        }
+        // Public form submissions
+        if (preg_match('#^/api/forms/[^/]+/submit$#', $path)) {
             return null;
         }
         if ($auth->userCount() === 0) {
@@ -191,6 +273,10 @@ if (str_starts_with($path, '/api/')) {
         }
         $public = ['/api/login', '/api/logout'];
         if (in_array($path, $public, true)) {
+            return null;
+        }
+        // Allow public form submissions
+        if (preg_match('#^/api/forms/[^/]+/submit$#', $path)) {
             return null;
         }
         if ($auth->userCount() === 0) {
@@ -219,6 +305,14 @@ if (str_starts_with($path, '/api/')) {
     register_webhook_routes($router, $webhooks);
     register_cron_routes($router, $scheduler);
     register_ai_routes($router, $ai, $aiLogs, $analytics, $posts, $campaigns);
+    register_utm_routes($router, $utmBuilder, $linkShortener);
+    register_link_routes($router, $linkShortener);
+    register_landing_page_routes($router, $landingPages);
+    register_contact_routes($router, $contactRepo, $automations);
+    register_form_routes($router, $formRepo, $contactRepo, $automations);
+    register_ab_test_routes($router, $abTests);
+    register_funnel_routes($router, $funnels);
+    register_automation_routes($router, $automations);
 
     // Dispatch
     if (!$router->dispatch($method, $uri)) {
