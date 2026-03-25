@@ -33,7 +33,8 @@ public/
         utils.js              # DOM helpers ($, $$, escapeHtml, formatDateTime, etc.)
         toast.js              # Notification system
       pages/                  # One module per page (exports init() + refresh())
-        ai.js                 # AI Studio - 18 tools with categories
+        ai.js                 # AI Studio - 25+ tools with categories
+        assistant.js          # AI Writing Assistant - floating refinement panel
         content.js            # Content Studio - calendar, list, create with AI buttons
         dashboard.js          # Dashboard - metrics, recent items, AI quick actions
         email.js              # Email Marketing - lists, subscribers, campaigns, AI compose
@@ -61,7 +62,7 @@ src/
   Database.php                # SQLite schema (35+ tables), auto-migration
   Auth.php                    # Session + bearer token, CSRF, rate limiting
   Router.php                  # Lightweight router with middleware
-  AiService.php               # Multi-provider AI (OpenAI, Anthropic, Gemini)
+  AiService.php               # Multi-provider AI (OpenAI, Anthropic, Gemini) - 26 methods
   Repositories.php            # Data access layer (Post, Campaign, Competitor, etc.)
   SocialPublisher.php         # Multi-platform publishing (Twitter, Bluesky, Mastodon, Facebook, Instagram)
   SocialQueue.php             # Queue with best-time optimization
@@ -84,7 +85,7 @@ src/
   RssFetcher.php              # RSS/Atom parser
   Webhooks.php                # Event dispatch + HMAC signing
   routes/                     # 28 route files (one per API domain)
-    ai.php                    # 18 AI tool endpoints + /api/ai/multi + /api/ai/providers + /api/ai/bulk
+    ai.php                    # 26 AI tool endpoints + /api/ai/multi + /api/ai/providers + /api/ai/bulk
     posts.php                 # Full CRUD, calendar, bulk ops, approval workflows
     auth.php                  # Login, logout, setup status
     campaigns.php, contacts.php, email.php, etc.
@@ -99,6 +100,8 @@ src/
 
 ### AiService.php Methods
 Each maps to an `/api/ai/*` endpoint:
+
+**Content Creation (Original):**
 - `marketResearch()` -> `/api/ai/research`
 - `contentIdeas()` -> `/api/ai/ideas`
 - `generateContent()` -> `/api/ai/content` (main content writer)
@@ -118,17 +121,44 @@ Each maps to an `/api/ai/*` endpoint:
 - `competitorAnalysis()` -> `/api/ai/competitor-analysis`
 - `weeklyReport()` -> `/api/ai/report`
 
+**Enhanced AI (New):**
+- `refineContent()` -> `/api/ai/refine` (12 actions: improve, expand, shorten, formal, casual, persuasive, storytelling, simplify, add_hooks, add_cta, emoji, bullet_points)
+- `toneAnalysis()` -> `/api/ai/tone-analysis` (sentiment, readability, emotion map, brand alignment)
+- `contentBrief()` -> `/api/ai/brief` (full content brief with outline, SEO, distribution plan)
+- `headlineOptimizer()` -> `/api/ai/headlines` (10 variations with psychological triggers)
+- `campaignOptimizer()` -> `/api/ai/campaign-optimizer` (budget, channel mix, creative recommendations)
+- `contentCalendarMonth()` -> `/api/ai/calendar-month` (full month content plan)
+- `smartPostingTime()` -> `/api/ai/smart-times` (platform-specific optimal schedule)
+- `aiInsights()` -> `/api/ai/insights` (proactive recommendations from marketing data)
+
 ### AI Integration Points (throughout the app)
-- **AI Studio** (`pages/ai.js`): All 18 tools with category tabs, sticky output panel, copy/use actions
-- **Content Studio** (`pages/content.js`): AI Write Content, AI Title, AI Hashtags, AI Score
-- **Email Marketing** (`pages/email.js`): AI Write Email, AI Subject Lines
-- **Campaigns** (`pages/campaigns.js`): AI Strategy
+- **AI Studio** (`pages/ai.js`): All 25+ tools with category tabs, sticky output panel, copy/use actions
+- **AI Writing Assistant** (`pages/assistant.js`): Floating panel with 12 refinement actions, 4 tone changes, analysis tools, accessible from any page via FAB button
+- **Content Studio** (`pages/content.js`): AI Write Content, AI Title, AI Hashtags, AI Score, inline AI toolbar (improve/expand/shorten/persuasive/emoji), one-click repurpose per post
+- **Email Marketing** (`pages/email.js`): AI Write Email, AI Subject Lines, inline AI toolbar on body field
+- **Campaigns** (`pages/campaigns.js`): AI Strategy, AI Campaign Optimizer
 - **Landing Pages** (`pages/landing.js`): AI Generate Copy
 - **Competitors** (`pages/competitors.js`): AI Deep Dive
 - **A/B Tests** (`pages/abtests.js`): AI Generate Variants
-- **Dashboard** (`pages/dashboard.js`): 6 AI quick action buttons
-- **Global Command Bar** (`core/router.js`): Ctrl+K from any page
+- **Dashboard** (`pages/dashboard.js`): 6 AI quick action buttons, AI Insights card with proactive recommendations
+- **Global Command Bar** (`core/router.js`): Ctrl+K from any page, 10 quick actions in 2 groups
 - **SEO Tools** (`pages/seo.js`): AI keyword research, blog generation
+- **Publish Queue** (`pages/queue.js`): AI Smart Posting Times with platform-specific recommendations
+
+### AI Writing Assistant (`pages/assistant.js`)
+Floating side panel accessible from any page via the purple FAB button (bottom-right corner).
+- **Quick Actions** (12): Improve, Expand, Shorten, Add Hooks, Add CTA, Bullet Points, Add Emojis, Simplify
+- **Tone Changes** (4): Formal, Casual, Persuasive, Storytelling
+- **Analysis**: Tone Analysis, Content Score, Headline Ideas
+- **Custom Instructions**: Free-form AI refinement input
+- **Apply to Field**: One-click to replace the active textarea content with AI output
+- Automatically detects the last-focused textarea on the current page
+
+### AI Inline Toolbar
+Contextual AI action buttons rendered above textarea fields. Currently on:
+- Content Studio post body textarea
+- Email Compose HTML body textarea
+Uses `.ai-inline-btn[data-inline-refine]` elements, wired globally in `app.js::initInlineAiToolbars()`.
 
 ### Brand Voice
 `BrandProfileRepository` in `Repositories.php` manages brand voice profiles. Active profile fields (`voice_tone`, `vocabulary`, `avoid_words`, `example_content`, `target_audience`) are injected into AI system prompts via `AiService::buildSystemPrompt()`.

@@ -91,14 +91,18 @@ If AI keys are missing, the app returns deterministic fallback output so all wor
 - **Recurring posts:** daily, weekly, biweekly, monthly recurrence
 - **Evergreen content** flagging
 - **AI-powered content generation** directly from the post form
+- **AI inline toolbar** on body field: one-click improve, expand, shorten, persuasive, emojis
+- **One-click AI repurpose** from post list to AI Studio
 
-### AI Studio (18 tools)
+### AI Studio (25+ tools)
 | Tool | Endpoint | Description |
 |------|----------|-------------|
 | Market Research | `POST /api/ai/research` | ICP, pain points, objections, 30-day plan |
 | Content Ideas | `POST /api/ai/ideas` | 8 platform-specific ideas with hooks and CTAs |
 | Content Writer | `POST /api/ai/content` | Social posts, captions, ad copy, emails |
 | Blog Generator | `POST /api/ai/blog-post` | 1200-1800 word SEO blog with meta tags and FAQ |
+| Content Brief | `POST /api/ai/brief` | Full content brief with outline, SEO keywords, distribution plan |
+| Headline Optimizer | `POST /api/ai/headlines` | 10 headline variations with psychological triggers and CTR predictions |
 | SEO Keywords | `POST /api/ai/seo-keywords` | 20 keywords with intent, difficulty, content type |
 | Hashtag Research | `POST /api/ai/hashtags` | 30 hashtags in 3 volume tiers |
 | Content Repurpose | `POST /api/ai/repurpose` | Convert content across formats (tweet, LinkedIn, email, etc.) |
@@ -106,13 +110,40 @@ If AI keys are missing, the app returns deterministic fallback output so all wor
 | Email Subject Lines | `POST /api/ai/subject-lines` | 10 subjects with predicted open rate and psychological trigger |
 | Audience Persona | `POST /api/ai/persona` | Detailed buyer persona with messaging dos/don'ts |
 | Content Scorer | `POST /api/ai/score` | 1-100 score across 5 categories with improvement tips |
+| Tone Analyzer | `POST /api/ai/tone-analysis` | Sentiment, readability, emotion map, brand alignment |
+| Content Refiner | `POST /api/ai/refine` | 12 refinement actions (improve, expand, shorten, tone changes, etc.) |
 | Posting Calendar | `POST /api/ai/calendar` | 14-day schedule with times, channels, KPIs |
+| Monthly Calendar | `POST /api/ai/calendar-month` | Full month content plan with topics, channels, posting times |
+| Smart Posting Times | `POST /api/ai/smart-times` | Platform-specific optimal posting schedule |
 | Video Script | `POST /api/ai/video-script` | Scene-by-scene script with hooks, overlays, captions |
 | Caption Batch | `POST /api/ai/caption-batch` | Multi-platform captions in one request |
 | SEO Audit | `POST /api/ai/seo-audit` | 10-point page audit with scores and quick wins |
 | Social Strategy | `POST /api/ai/social-strategy` | Full strategy with content pillars, schedule, KPIs |
+| Campaign Optimizer | `POST /api/ai/campaign-optimizer` | Budget, channel mix, and creative optimization |
 | Competitor Analysis | `POST /api/ai/competitor-analysis` | Deep competitive analysis with counter-strategies |
 | Weekly Report | `POST /api/ai/report` | AI-generated performance summary from your data |
+| AI Insights | `POST /api/ai/insights` | Proactive recommendations based on marketing data |
+
+### AI Writing Assistant
+A floating side panel accessible from any page via the purple FAB button (bottom-right) or from within any textarea:
+- **12 Quick Refinement Actions:** Improve, Expand, Shorten, Add Hooks, Add CTA, Bullet Points, Add Emojis, Simplify, Formal, Casual, Persuasive, Storytelling
+- **Analysis Tools:** Tone Analysis, Content Score, Headline Ideas
+- **Custom Instructions:** Free-form AI refinement with any prompt
+- **Apply to Field:** One-click replacement of active textarea content
+- **Context Aware:** Automatically detects the focused textarea on the current page
+
+### AI Inline Toolbar
+Contextual AI action buttons rendered directly above textarea fields:
+- **Content Studio:** Improve, Expand, Shorten, Persuasive, Emojis buttons above post body
+- **Email Compose:** Improve, Expand, Shorten, Persuasive buttons above HTML body
+- One-click refinement without leaving the form
+
+### AI Dashboard Insights
+Proactive AI-powered recommendation cards on the dashboard:
+- Priority-coded badges (high/medium/low)
+- Category icons (content, engagement, growth, optimization)
+- Specific action items based on your marketing data
+- Refresh on demand
 
 ### Campaign Management
 - Campaign CRUD with budget, date range, channel, objective
@@ -120,11 +151,13 @@ If AI keys are missing, the app returns deterministic fallback output so all wor
 - **Performance metrics:** ROI %, CTR, conversion rate, CPA, ROAS — all auto-calculated
 - **Campaign comparison:** compare multiple campaigns side-by-side
 - Budget utilization progress bars
+- **AI Campaign Optimizer** for budget, channel mix, and creative recommendations
 
 ### Social Media Publishing
 - **Multi-platform publishing:** Twitter/X, Bluesky, Mastodon, Facebook Pages, Instagram
 - **Publish Queue:** queue posts with priority and optimal time scheduling
 - **Best posting times:** analytics based on historical publish success data
+- **AI Smart Posting Times:** AI-powered schedule recommendations per platform and audience
 - Social account management with token handling
 - Automatic retry with exponential backoff on failures
 - Publish log with success/error tracking
@@ -211,6 +244,9 @@ If AI keys are missing, the app returns deterministic fallback output so all wor
 - **Brand voice profiles** for consistent AI-generated content
 - **Dark/light theme** toggle
 - **Responsive design** — works on desktop and mobile
+- **AI Writing Assistant** — floating panel for content refinement from any page
+- **AI Dashboard Insights** — proactive recommendations based on marketing data
+- **Global AI Command Bar** (Ctrl+K) with 10 quick actions
 
 ## Architecture
 
@@ -231,7 +267,7 @@ marketing/
 │           │   ├── api.js      # Fetch wrapper with CSRF + auth
 │           │   ├── toast.js    # Notification system
 │           │   └── utils.js    # DOM helpers, formatters, escaping
-│           └── pages/         # 21 page modules (one per feature)
+│           └── pages/         # 22 page modules (one per feature, + AI assistant)
 ├── src/
 │   ├── bootstrap.php        # Helper functions (env, JSON response, security headers)
 │   ├── Database.php         # SQLite schema (35+ tables, auto-migration)
@@ -240,7 +276,7 @@ marketing/
 │   ├── Repositories.php     # Campaign, Post, Competitor, KPI, Email repos
 │   ├── Templates.php        # Template + Brand Profile repos
 │   ├── Analytics.php        # Dashboard metrics, charts, CSV export
-│   ├── AiService.php        # Multi-provider AI (18 methods)
+│   ├── AiService.php        # Multi-provider AI (26 methods)
 │   ├── EmailService.php     # SMTP client + tracking + merge tags
 │   ├── SocialPublisher.php  # Multi-platform publishing (5 platforms)
 │   ├── MediaLibrary.php     # File uploads + thumbnails
