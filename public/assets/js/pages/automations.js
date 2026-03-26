@@ -7,6 +7,9 @@ import { toast } from '../core/toast.js';
 
 export function init() {
   $('automationForm')?.addEventListener('submit', handleCreate);
+  $('automationAction')?.addEventListener('change', applyAutomationTemplates);
+  $('automationTrigger')?.addEventListener('change', applyAutomationTemplates);
+  applyAutomationTemplates();
 }
 
 export async function refresh() {
@@ -75,3 +78,33 @@ window._deleteAutomation = async (id) => {
   try { await api(`/api/automations/${id}`, { method: 'DELETE' }); toast('Deleted', 'success'); refresh(); } catch (e) { toast(e.message, 'error'); }
 };
 
+function applyAutomationTemplates() {
+  const actionSelect = $('automationAction');
+  const triggerSelect = $('automationTrigger');
+  const actionConfigInput = document.querySelector('#automationForm [name="action_config"]');
+  const conditionsInput = document.querySelector('#automationForm [name="conditions"]');
+  if (!actionSelect || !triggerSelect || !actionConfigInput || !conditionsInput) return;
+
+  const actionTemplates = {
+    tag_contact: '{"tag":"new-lead"}',
+    update_contact_stage: '{"stage":"mql"}',
+    add_score: '{"points":10}',
+    add_to_list: '{"list_id":1}',
+    send_webhook: '{"url":"https://example.com/webhook"}',
+    log_activity: '{"message":"Automation triggered by workflow rule"}',
+  };
+  const conditionTemplates = {
+    'form.submitted': '{"source":"form"}',
+    'contact.created': '{"source":"manual"}',
+    'contact.stage_changed': '{"new_stage":"mql"}',
+    'post.published': '{"platform":"instagram"}',
+    'post.scheduled': '{"platform":"linkedin"}',
+    'subscriber.added': '{"list_id":"1"}',
+    'email.sent': '{"campaign_id":"1"}',
+    'landing_page.conversion': '{"landing_page_id":"1"}',
+    'link.clicked': '{"code":"abc123"}',
+  };
+
+  actionConfigInput.placeholder = actionTemplates[actionSelect.value] || '{}';
+  conditionsInput.placeholder = conditionTemplates[triggerSelect.value] || '{}';
+}

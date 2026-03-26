@@ -124,10 +124,6 @@ RULES:
         if (preg_match('/schedule|queue|upcoming|planned/', $q)) {
             $ctx[] = $this->getUpcoming();
         }
-        if (preg_match('/memory|remember|context|knowledge|wordpress|site/', $q)) {
-            $ctx[] = $this->getSharedMemory();
-        }
-
         // Always include shared memory so all AI assistants stay aligned.
         $ctx[] = $this->getSharedMemory();
 

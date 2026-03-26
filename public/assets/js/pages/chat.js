@@ -198,13 +198,20 @@ async function loadProviderModels() {
   try {
     const data = await api('/api/ai/providers');
     providerModels = {};
-    if (data.providers) {
+    if (data.providers && typeof data.providers === 'object') {
       for (const [key, info] of Object.entries(data.providers)) {
-        if (info.models && Array.isArray(info.models)) {
-          providerModels[key] = {};
+        providerModels[key] = {};
+        if (info?.labels && typeof info.labels === 'object') {
+          providerModels[key] = { ...info.labels };
+          continue;
+        }
+        if (Array.isArray(info?.models)) {
           info.models.forEach((m) => { providerModels[key][m] = m; });
         }
       }
+    } else if (data.models && typeof data.models === 'object') {
+      // Backward-compatible fallback.
+      providerModels = { ...data.models };
     }
     // Also populate provider select with available providers
     const providerSelect = $('chatProviderSelect');
@@ -212,7 +219,7 @@ async function loadProviderModels() {
       const currentVal = providerSelect.value;
       providerSelect.innerHTML = '<option value="">Auto (Default)</option>';
       for (const [key, info] of Object.entries(data.providers)) {
-        if (info.configured) {
+        if (info?.configured) {
           const opt = document.createElement('option');
           opt.value = key;
           opt.textContent = key.charAt(0).toUpperCase() + key.slice(1) + (info.model ? ` (${info.model})` : '');
