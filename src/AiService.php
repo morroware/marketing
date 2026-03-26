@@ -132,6 +132,28 @@ final class AiService
 
     public function providerStatus(): array
     {
+        $currentModels = [
+            'openai'     => $this->config['openai_model'] ?? 'gpt-4.1-mini',
+            'anthropic'  => $this->config['anthropic_model'] ?? 'claude-sonnet-4-20250514',
+            'gemini'     => $this->config['gemini_model'] ?? 'gemini-2.5-flash',
+            'deepseek'   => $this->config['deepseek_model'] ?? 'deepseek-chat',
+            'groq'       => $this->config['groq_model'] ?? 'llama-3.3-70b-versatile',
+            'mistral'    => $this->config['mistral_model'] ?? 'mistral-large-latest',
+            'openrouter' => $this->config['openrouter_model'] ?? 'anthropic/claude-sonnet-4',
+            'xai'        => $this->config['xai_model'] ?? 'grok-3-fast',
+            'together'   => $this->config['together_model'] ?? 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+        ];
+
+        $providers = [];
+        foreach (['openai', 'anthropic', 'gemini', 'deepseek', 'groq', 'mistral', 'openrouter', 'xai', 'together'] as $provider) {
+            $providers[$provider] = [
+                'configured' => $this->providerHasKey($provider),
+                'model' => $currentModels[$provider] ?? null,
+                'models' => array_keys(self::MODELS[$provider] ?? []),
+                'labels' => self::MODELS[$provider] ?? [],
+            ];
+        }
+
         return [
             'active_provider'    => $this->provider,
             'supports'           => ['openai', 'anthropic', 'gemini', 'deepseek', 'groq', 'mistral', 'openrouter', 'xai', 'together'],
@@ -145,18 +167,9 @@ final class AiService
             'has_xai_key'        => !empty($this->config['xai_api_key']),
             'has_together_key'   => !empty($this->config['together_api_key']),
             'has_banana_key'     => !empty($this->config['banana_api_key']),
+            'providers'          => $providers,
             'models'             => self::MODELS,
-            'current_models'     => [
-                'openai'     => $this->config['openai_model'] ?? 'gpt-4.1-mini',
-                'anthropic'  => $this->config['anthropic_model'] ?? 'claude-sonnet-4-20250514',
-                'gemini'     => $this->config['gemini_model'] ?? 'gemini-2.5-flash',
-                'deepseek'   => $this->config['deepseek_model'] ?? 'deepseek-chat',
-                'groq'       => $this->config['groq_model'] ?? 'llama-3.3-70b-versatile',
-                'mistral'    => $this->config['mistral_model'] ?? 'mistral-large-latest',
-                'openrouter' => $this->config['openrouter_model'] ?? 'anthropic/claude-sonnet-4',
-                'xai'        => $this->config['xai_model'] ?? 'grok-3-fast',
-                'together'   => $this->config['together_model'] ?? 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
-            ],
+            'current_models'     => $currentModels,
         ];
     }
 
