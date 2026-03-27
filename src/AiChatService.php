@@ -270,14 +270,21 @@ RULES:
         'landing_pages', 'automation_rules', 'audience_segments',
     ];
 
-    private function count(string $table, string $where = '1=1'): int
+    private function count(string $table, string $where = '1=1', array $params = []): int
     {
         if (!in_array($table, self::$allowedTables, true)) {
             return 0;
         }
         try {
-            $stmt = $this->pdo->query("SELECT COUNT(*) as c FROM {$table} WHERE {$where}");
-            return (int)($stmt->fetch(PDO::FETCH_ASSOC)['c'] ?? 0);
+            $sql = "SELECT COUNT(*) as c FROM {$table} WHERE {$where}";
+            if ($params) {
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute($params);
+            } else {
+                $stmt = $this->pdo->query($sql);
+            }
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int)($row['c'] ?? 0);
         } catch (\PDOException $e) {
             error_log("AiChatService::count error on {$table}: " . $e->getMessage());
             return 0;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 function register_analytics_routes(Router $router, Analytics $analytics): void
 {
     $router->get('/api/analytics/overview', function () use ($analytics) {
-        $days = (int)($_GET['days'] ?? 30);
+        $days = max(1, min(365, (int)($_GET['days'] ?? 30)));
         json_response($analytics->overview($days));
     });
 
@@ -19,7 +19,7 @@ function register_analytics_routes(Router $router, Analytics $analytics): void
             json_response(['error' => 'Invalid metric'], 400);
             return;
         }
-        $days = (int)($_GET['days'] ?? 30);
+        $days = max(1, min(365, (int)($_GET['days'] ?? 30)));
         json_response(['data' => $analytics->chartData($p['metric'], $days)]);
     });
 

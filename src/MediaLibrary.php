@@ -134,6 +134,12 @@ final class MediaLibrary
             return false;
         }
 
+        // Validate filename to prevent path traversal
+        if (str_contains($item['filename'], '..') || str_contains($item['filename'], '/') || str_contains($item['filename'], '\\')) {
+            error_log("MediaLibrary::delete blocked suspicious filename: " . $item['filename']);
+            return false;
+        }
+
         $filePath = $this->uploadDir . '/' . $item['filename'];
         $thumbPath = $this->uploadDir . '/thumbs/' . $item['filename'];
 

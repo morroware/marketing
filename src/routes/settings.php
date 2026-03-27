@@ -33,8 +33,18 @@ function register_settings_routes(Router $router, AiService $ai, Scheduler $sche
         $updated = [];
         foreach ($allowedKeys as $key) {
             if (array_key_exists($key, $data)) {
-                db_setting($key, (string)$data[$key], $pdo);
-                $updated[$key] = $data[$key];
+                $val = (string)$data[$key];
+                // Validate specific settings
+                if ($key === 'TIMEZONE' && $val !== '' && !in_array($val, timezone_identifiers_list(), true)) {
+                    json_response(['error' => 'Invalid timezone: ' . $val], 422);
+                    return;
+                }
+                if ($key === 'AI_PROVIDER' && $val !== '' && !in_array($val, ['openai', 'anthropic', 'gemini', 'deepseek', 'groq', 'mistral', 'openrouter', 'xai', 'together'], true)) {
+                    json_response(['error' => 'Invalid AI provider: ' . $val], 422);
+                    return;
+                }
+                db_setting($key, $val, $pdo);
+                $updated[$key] = $val;
             }
         }
         if (empty($updated)) {
