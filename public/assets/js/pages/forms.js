@@ -91,7 +91,8 @@ async function loadSubmissions() {
     const tb = $('submissionTable');
     if (!tb) return;
     tb.innerHTML = data.map(s => {
-      const d = JSON.parse(s.data_json || '{}');
+      let d = {};
+      try { d = JSON.parse(s.data_json || '{}'); } catch (_) { /* invalid JSON */ }
       const fields = Object.entries(d).map(([k, v]) => `<strong>${escapeHtml(k)}:</strong> ${escapeHtml(String(v))}`).join(', ');
       return `<tr>
         <td class="text-small">${formatDate(s.submitted_at)}</td>

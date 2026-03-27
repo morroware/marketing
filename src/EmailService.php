@@ -421,7 +421,8 @@ class EmailService
                 ':tracked_at' => date('Y-m-d H:i:s'),
             ]);
         } catch (\Throwable $e) {
-            // Silently continue — tracking failure should not block sending.
+            // Tracking failure should not block sending, but log for debugging.
+            error_log("EmailService tracking error: " . $e->getMessage());
         }
     }
 

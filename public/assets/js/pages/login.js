@@ -52,8 +52,8 @@ export async function checkSession() {
 export function init() {
   onSubmit('loginForm', async (e) => {
     const form = e.target;
-    const username = form.querySelector('[name="username"]').value;
-    const password = form.querySelector('[name="password"]').value;
+    const username = form.querySelector('[name="username"]')?.value || '';
+    const password = form.querySelector('[name="password"]')?.value || '';
 
     try {
       const data = await api('/api/login', {

@@ -108,7 +108,8 @@ async function handleUtmCreate(e) {
     toast('UTM link created', 'success');
 
     $('utmResult')?.classList.remove('hidden');
-    $('utmUrl').textContent = result.full_url;
+    const utmUrlEl = $('utmUrl');
+    if (utmUrlEl) utmUrlEl.textContent = result.full_url;
 
     const shortEl = $('utmShortUrl');
     if (shortEl && result.short_link) {

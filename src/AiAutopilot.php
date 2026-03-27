@@ -240,7 +240,8 @@ final class AiAutopilot
         $this->completeTask($taskId);
 
         // Mark autopilot as run in business profile
-        $this->pdo->exec("UPDATE business_profile SET autopilot_run = 1, updated_at = '" . gmdate(DATE_ATOM) . "'");
+        $stmt = $this->pdo->prepare('UPDATE business_profile SET autopilot_run = 1, updated_at = :updated');
+        $stmt->execute([':updated' => gmdate(DATE_ATOM)]);
 
         return ['task_id' => $taskId, 'status' => 'completed'];
     }
@@ -359,7 +360,7 @@ final class AiAutopilot
         // Step 2: Next week content ideas
         $this->updateStep($taskId, 2, 'ideas');
         try {
-            $bp = $this->getBusinessProfile();
+            $bp = $this->getBusinessProfile() ?? [];
             $topic = $bp['products_services'] ?? $bp['business_description'] ?? 'our business';
             $platforms = array_filter(array_map('trim', explode(',', $bp['active_platforms'] ?? 'instagram')));
             foreach (array_slice($platforms, 0, 2) as $platform) {
