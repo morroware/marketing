@@ -11,15 +11,19 @@ function renderMetrics(data) {
   if (!el) return;
 
   const posts = data.posts || {};
+  const campaigns = data.campaigns?.total ?? 0;
+  const aiUsage = data.ai_usage || {};
   const cards = [
-    ['Total Posts', posts.total ?? 0],
-    ['Published', posts.published ?? 0],
-    ['Scheduled', posts.scheduled ?? 0],
-    ['Draft', posts.draft ?? 0],
+    ['Total Posts', posts.total ?? 0, '&#9998;'],
+    ['Published', posts.published ?? 0, '&#10003;'],
+    ['Scheduled', posts.scheduled ?? 0, '&#128197;'],
+    ['Drafts', posts.drafts ?? 0, '&#128221;'],
+    ['Campaigns', campaigns, '&#9776;'],
+    ['AI Ideas', aiUsage.ideas_count ?? 0, '&#128161;'],
   ];
 
-  el.innerHTML = cards.map(([label, value]) =>
-    `<div class="metric-card"><div class="metric-value">${escapeHtml(value)}</div><div class="metric-label">${label}</div></div>`
+  el.innerHTML = cards.map(([label, value, icon]) =>
+    `<div class="metric-card"><div class="metric-icon">${icon}</div><div class="metric-value">${escapeHtml(value)}</div><div class="metric-label">${label}</div></div>`
   ).join('');
 }
 
@@ -41,20 +45,67 @@ function renderChart(container, data, label) {
 
   const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
 
-  const svg = `<svg viewBox="0 0 ${width} ${height}" class="chart-svg">
-    <path d="${pathD}" fill="none" stroke="var(--primary)" stroke-width="2" />
-    ${points.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="var(--primary)"><title>${escapeHtml(p.label)}: ${p.value}</title></circle>`).join('')}
-    <text x="${width / 2}" y="${height - 5}" text-anchor="middle" class="chart-label">${escapeHtml(label)}</text>
+  // Area fill
+  const areaD = pathD + ` L${points[points.length - 1].x},${height - pad} L${points[0].x},${height - pad} Z`;
+
+  const svg = `<svg viewBox="0 0 ${width} ${height}" class="chart-svg" style="width:100%;max-width:${width}px">
+    <defs>
+      <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.3"/>
+        <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.02"/>
+      </linearGradient>
+    </defs>
+    <path d="${areaD}" fill="url(#chartGrad)" />
+    <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+    ${points.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"><title>${escapeHtml(p.label)}: ${p.value}</title></circle>`).join('')}
+    <text x="${width / 2}" y="${height - 5}" text-anchor="middle" fill="var(--text-muted)" font-size="12">${escapeHtml(label)}</text>
   </svg>`;
 
   container.innerHTML = svg;
 }
 
+function renderPlatformBreakdown(data) {
+  const posts = data.by_platform || [];
+  const el = $('analyticsCharts');
+  if (!el || posts.length === 0) return;
+
+  const maxCount = Math.max(...posts.map(p => p.count), 1);
+  const platformColors = {
+    instagram: '#E4405F', facebook: '#1877F2', twitter: '#1DA1F2', linkedin: '#0A66C2',
+    bluesky: '#0085FF', mastodon: '#6364FF', tiktok: '#000000', youtube: '#FF0000',
+    pinterest: '#BD081C', reddit: '#FF4500', telegram: '#0088CC', discord: '#5865F2',
+  };
+
+  const barsHtml = posts.map(p => {
+    const color = platformColors[p.platform] || 'var(--accent)';
+    const pct = Math.max(5, Math.round((p.count / maxCount) * 100));
+    return `<div class="activity-bar-row">
+      <span class="activity-bar-label">${escapeHtml(p.platform)}</span>
+      <div class="activity-bar-track">
+        <div class="activity-bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <span class="activity-bar-count">${p.count}</span>
+    </div>`;
+  }).join('');
+
+  // Append after chart
+  const breakdown = document.createElement('div');
+  breakdown.className = 'card mt-1';
+  breakdown.innerHTML = `<h3>Posts by Platform</h3><div class="activity-bar-chart">${barsHtml}</div>`;
+  el.parentElement?.insertBefore(breakdown, el.nextSibling);
+}
+
 export async function refresh() {
+  // Remove any previously rendered platform breakdown
+  document.querySelectorAll('#page-analytics .card.mt-1').forEach(el => {
+    if (el.querySelector('.activity-bar-chart') && !el.querySelector('[onclick]')) el.remove();
+  });
+
   const days = parseInt($('analyticsPeriod')?.value || '30');
   try {
     const overview = await api(`/api/analytics/overview?days=${days}`);
     renderMetrics(overview);
+    renderPlatformBreakdown(overview);
 
     // Load chart data
     const chartEl = $('analyticsCharts');

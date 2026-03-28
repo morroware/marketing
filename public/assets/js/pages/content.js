@@ -8,6 +8,73 @@ import { success, error } from '../core/toast.js';
 
 let selectedIds = new Set();
 let calendarDate = new Date();
+let editingPostId = null;
+
+/* ---- Post editing ---- */
+
+async function loadPostForEditing(id) {
+  try {
+    const { item } = await api(`/api/posts/${id}`);
+    if (!item) { error('Post not found'); return; }
+
+    editingPostId = id;
+
+    // Switch to create tab
+    document.querySelector('[data-tab="content-create"]')?.click();
+
+    // Populate form fields
+    const form = $('postForm');
+    if (!form) return;
+
+    const setVal = (name, val) => {
+      const el = form.querySelector(`[name="${name}"]`);
+      if (el) el.value = val || '';
+    };
+
+    setVal('campaign_id', item.campaign_id);
+    setVal('platform', item.platform);
+    setVal('content_type', item.content_type);
+    setVal('title', item.title);
+    setVal('body', item.body);
+    setVal('cta', item.cta);
+    setVal('tags', item.tags);
+    setVal('scheduled_for', item.scheduled_for ? item.scheduled_for.slice(0, 16) : '');
+    setVal('ai_score', item.ai_score);
+    setVal('recurrence', item.recurrence || 'none');
+
+    const evergreen = form.querySelector('[name="is_evergreen"]');
+    if (evergreen) evergreen.checked = !!item.is_evergreen;
+
+    // Update submit button text
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = 'Update Post';
+
+    // Show cancel edit button
+    let cancelBtn = $('cancelEditPost');
+    if (!cancelBtn) {
+      cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.id = 'cancelEditPost';
+      cancelBtn.className = 'btn btn-ghost';
+      cancelBtn.textContent = 'Cancel Edit';
+      submitBtn?.parentElement?.insertBefore(cancelBtn, submitBtn.nextSibling);
+    }
+    cancelBtn.style.display = '';
+    cancelBtn.onclick = () => {
+      editingPostId = null;
+      form.reset();
+      if (submitBtn) submitBtn.textContent = 'Save Post';
+      cancelBtn.style.display = 'none';
+    };
+
+    // Trigger preview update
+    $('postBodyTextarea')?.dispatchEvent(new Event('input'));
+
+    success('Post loaded for editing');
+  } catch (err) {
+    error('Failed to load post: ' + err.message);
+  }
+}
 
 /* ---- Post list ---- */
 
@@ -66,7 +133,10 @@ async function refreshPosts() {
 
 async function handlePostAction(action, id, btn) {
   try {
-    if (action === 'publish') {
+    if (action === 'edit') {
+      await loadPostForEditing(id);
+      return;
+    } else if (action === 'publish') {
       await api(`/api/posts/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'published' }) });
       success('Post published');
     } else if (action === 'delete') {
@@ -204,9 +274,19 @@ export function init() {
       data.status = data.scheduled_for ? 'scheduled' : 'draft';
     }
     try {
-      await api('/api/posts', { method: 'POST', body: JSON.stringify(data) });
+      if (editingPostId) {
+        await api(`/api/posts/${editingPostId}`, { method: 'PATCH', body: JSON.stringify(data) });
+        success('Post updated');
+        editingPostId = null;
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.textContent = 'Save Post';
+        const cancelBtn = $('cancelEditPost');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+      } else {
+        await api('/api/posts', { method: 'POST', body: JSON.stringify(data) });
+        success('Post created');
+      }
       e.target.reset();
-      success('Post created');
       refreshPosts();
     } catch (err) {
       error(err.message);

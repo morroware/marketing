@@ -266,6 +266,14 @@ final class AiOrchestrator
                     ['pipeline_run_id' => $runId, 'step' => $i],
                 );
 
+                // Extract learnings from pipeline step output
+                $this->memoryEngine->extractAndSaveLearnings(
+                    "pipeline:{$toolName}",
+                    json_encode($resolvedInput),
+                    $outputStr,
+                    $activityId,
+                );
+
                 $results[] = [
                     'step'        => $i + 1,
                     'tool'        => $toolName,

@@ -6,6 +6,8 @@ import { api } from '../core/api.js';
 import { $, escapeHtml, formatDate, onSubmit, formData, emptyState, confirm } from '../core/utils.js';
 import { success, error } from '../core/toast.js';
 
+let editingCampaignId = null;
+
 export async function refresh() {
   try {
     const { items } = await api('/api/campaigns');
@@ -24,6 +26,7 @@ export async function refresh() {
           <div class="flex-between">
             <h4>${escapeHtml(c.name)}</h4>
             <div>
+              <button class="btn btn-sm btn-outline" data-edit-campaign="${c.id}">Edit</button>
               <button class="btn btn-sm btn-outline" data-metrics="${c.id}">Metrics</button>
               <button class="btn btn-sm btn-danger" data-delete="${c.id}">Delete</button>
             </div>
@@ -40,6 +43,11 @@ export async function refresh() {
 
     // Use onclick assignment to prevent listener accumulation on refresh
     list.onclick = async (e) => {
+      const editBtn = e.target.closest('[data-edit-campaign]');
+      if (editBtn) {
+        await loadCampaignForEditing(parseInt(editBtn.dataset.editCampaign));
+        return;
+      }
       const deleteBtn = e.target.closest('[data-delete]');
       if (deleteBtn) {
         if (!await confirm('Delete campaign?', 'This campaign and its metrics will be permanently removed.')) return;
@@ -121,12 +129,73 @@ async function toggleMetrics(campaignId) {
   }
 }
 
+async function loadCampaignForEditing(id) {
+  try {
+    const { item } = await api(`/api/campaigns/${id}`);
+    if (!item) { error('Campaign not found'); return; }
+
+    editingCampaignId = id;
+    const form = $('campaignForm');
+    if (!form) return;
+
+    const setVal = (name, val) => {
+      const el = form.querySelector(`[name="${name}"]`);
+      if (el) el.value = val || '';
+    };
+
+    setVal('name', item.name);
+    setVal('channel', item.channel);
+    setVal('objective', item.objective);
+    setVal('budget', item.budget);
+    setVal('start_date', item.start_date);
+    setVal('end_date', item.end_date);
+    setVal('notes', item.notes);
+    setVal('target_audience', item.target_audience);
+    setVal('kpi_target', item.kpi_target);
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = 'Update Campaign';
+
+    let cancelBtn = $('cancelEditCampaign');
+    if (!cancelBtn) {
+      cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.id = 'cancelEditCampaign';
+      cancelBtn.className = 'btn btn-ghost';
+      cancelBtn.textContent = 'Cancel Edit';
+      submitBtn?.parentElement?.appendChild(cancelBtn);
+    }
+    cancelBtn.style.display = '';
+    cancelBtn.onclick = () => {
+      editingCampaignId = null;
+      form.reset();
+      if (submitBtn) submitBtn.textContent = 'Create Campaign';
+      cancelBtn.style.display = 'none';
+    };
+
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    success('Campaign loaded for editing');
+  } catch (err) {
+    error('Failed to load campaign: ' + err.message);
+  }
+}
+
 export function init() {
   onSubmit('campaignForm', async (e) => {
     try {
-      await api('/api/campaigns', { method: 'POST', body: JSON.stringify(formData(e)) });
+      if (editingCampaignId) {
+        await api(`/api/campaigns/${editingCampaignId}`, { method: 'PUT', body: JSON.stringify(formData(e)) });
+        success('Campaign updated');
+        editingCampaignId = null;
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.textContent = 'Create Campaign';
+        const cancelBtn = $('cancelEditCampaign');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+      } else {
+        await api('/api/campaigns', { method: 'POST', body: JSON.stringify(formData(e)) });
+        success('Campaign created');
+      }
       e.target.reset();
-      success('Campaign created');
       refresh();
     } catch (err) {
       error(err.message);
