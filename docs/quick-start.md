@@ -1,6 +1,8 @@
 # Quick Start Guide
 
-This guide gets you from zero to a working **AI Marketing Department** in ~10 minutes.
+This guide gets you from zero to a working marketing operation in about 10 minutes.
+
+See **[Configuration](configuration.md)** for full environment variable reference and deployment options.
 
 ## 1) Start the app
 
@@ -105,3 +107,7 @@ Day 4-7:
 - Review analytics insights
 - Iterate copy with enhanced quality mode
 - Add shared memory notes from what performed best
+
+---
+
+**Next:** [AI System](ai-system.md) | [Content Management](content-management.md) | [Configuration](configuration.md)

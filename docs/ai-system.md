@@ -1,219 +1,174 @@
 # AI System
 
-The AI system provides 60+ endpoints across content creation, analysis, strategy, and conversational interfaces. It supports 9 providers through a unified API.
+The AI system provides 60+ tools across content creation, analysis, strategy, and conversational interfaces. It supports 9 providers through a unified interface.
 
-## Architecture
-
-```
-AiService.php              — Provider orchestration, HTTP transport, brand voice
-AiContentTools.php         — Content creation, repurposing, refinement (18 methods)
-AiAnalysisTools.php        — Scoring, tone analysis, SEO, pre-flight checks (7 methods)
-AiStrategyTools.php        — Research, strategy, campaigns, reporting (14 methods)
-AiChatService.php          — Conversational AI with database context (3 methods)
-```
+See **[Configuration](configuration.md)** for provider setup and API keys.
 
 ## Providers
 
-### Configuration
-
-Set `AI_PROVIDER` in `.env` to one of: `openai`, `anthropic`, `gemini`, `deepseek`, `groq`, `mistral`, `openrouter`, `xai`, `together`.
+Set your primary provider during install or change it anytime in **Settings**.
 
 Multiple providers can be configured simultaneously. The primary provider handles default requests while others can be selected per-request or used for multi-provider comparison.
 
-### Provider Details
-
-| Provider | API Style | Auth Header | Default Model |
-|----------|----------|-------------|---------------|
-| OpenAI | OpenAI Chat Completions | `Authorization: Bearer` | gpt-4.1-mini |
-| Anthropic | Anthropic Messages | `x-api-key` | claude-sonnet-4-20250514 |
-| Gemini | Google GenerativeAI | API key in URL | gemini-2.5-flash |
-| DeepSeek | OpenAI-compatible | `Authorization: Bearer` | deepseek-chat |
-| Groq | OpenAI-compatible | `Authorization: Bearer` | llama-3.3-70b-versatile |
-| Mistral | OpenAI-compatible | `Authorization: Bearer` | mistral-large-latest |
-| OpenRouter | OpenAI-compatible | `Authorization: Bearer` | anthropic/claude-sonnet-4 |
-| xAI | OpenAI-compatible | `Authorization: Bearer` | grok-3-fast |
-| Together AI | OpenAI-compatible | `Authorization: Bearer` | Llama-3.3-70B-Instruct-Turbo |
+| Provider | API Style | Default Model |
+|----------|----------|---------------|
+| OpenAI | Chat Completions | gpt-4.1-mini |
+| Anthropic | Messages API | claude-sonnet-4-20250514 |
+| Google Gemini | GenerativeAI | gemini-2.5-flash |
+| DeepSeek | OpenAI-compatible | deepseek-chat |
+| Groq | OpenAI-compatible | llama-3.3-70b-versatile |
+| Mistral | OpenAI-compatible | mistral-large-latest |
+| OpenRouter | OpenAI-compatible | anthropic/claude-sonnet-4 |
+| xAI | OpenAI-compatible | grok-3-fast |
+| Together AI | OpenAI-compatible | Llama-3.3-70B-Instruct-Turbo |
 
 ### Multi-Provider Features
 
-- **`POST /api/ai/multi`** — Run the same prompt on multiple providers simultaneously for comparison
-- **`POST /api/ai/bulk`** — Execute multiple different AI specs in one request
-- **`GET /api/ai/providers`** — Check which providers are configured and available
+- **Compare providers** — Run the same prompt on multiple providers simultaneously to compare output quality
+- **Bulk requests** — Execute multiple different AI tasks in one request
+- **Provider status** — Check which providers are configured and available from **Settings**
 
 ### Image Generation
 
-- **`POST /api/ai/generate-image`** — Generate images via Banana/NanoBanana, DALL-E 3, or Gemini
-- Provider priority: Banana > OpenAI DALL-E > Gemini
-- DALL-E sizes: 1024x1024, 1024x1792, 1792x1024
+Generate images via Banana/NanoBanana, DALL-E 3, or Gemini. Provider priority: Banana > OpenAI DALL-E > Gemini. Configure image provider keys in **Settings**.
 
-## AI Tools Reference
+## AI Tools
 
 ### Content Creation
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/ai/content` | `generateContent()` | Main content writer (supports `audience` and `quality_mode=standard|enhanced`) |
-| `/api/ai/blog-post` | `blogPostGenerator()` | 1200-1800 word SEO blog posts with meta tags and FAQ |
-| `/api/ai/video-script` | `videoScript()` | Scene-by-scene scripts with hooks and overlays |
-| `/api/ai/caption-batch` | `socialCaptionBatch()` | Multi-platform captions in one request |
-| `/api/ai/repurpose` | `repurposeContent()` | Convert content across formats (tweet, LinkedIn, email, etc.) |
-| `/api/ai/ad-variations` | `adVariations()` | 5+ ad angles with psychological triggers |
-| `/api/ai/subject-lines` | `emailSubjectLines()` | 10 email subjects with predicted open rates |
-| `/api/ai/brief` | `contentBrief()` | Full content brief with outline, SEO, distribution plan |
-| `/api/ai/headlines` | `headlineOptimizer()` | 10 headline variations with CTR predictions |
-| `/api/ai/refine` | `refineContent()` | 12 refinement actions (see below) |
-| `/api/ai/workflow` | — | Multi-day content workflow planning |
-| `/api/ai/drip-sequence` | — | Email drip sequence generation |
-| `/api/ai/image-prompts` | — | AI image prompt generation |
-| `/api/ai/multi-source-content` | `multiSourceContentSuite()` | Orchestrated copy + visual pipeline (different providers per stage) |
-| `/api/ai/localize` | — | Content localization for different languages |
-| `/api/ai/rss-to-post` | — | Convert RSS article to social post |
-| `/api/ai/build-brand-voice` | — | Extract brand voice from example content |
+| Tool | Description |
+|------|-------------|
+| **Content Writer** | Main content generator with audience targeting and quality modes (standard/enhanced) |
+| **Blog Post Generator** | 1200-1800 word SEO blog posts with meta tags and FAQ |
+| **Video Script** | Scene-by-scene scripts with hooks and overlays |
+| **Caption Batch** | Multi-platform captions in one request |
+| **Repurpose Content** | Convert content across formats (tweet, LinkedIn, email, Instagram, etc.) |
+| **Ad Variations** | 5+ ad angles with psychological triggers |
+| **Email Subject Lines** | 10 email subjects with predicted open rates |
+| **Content Brief** | Full content brief with outline, SEO plan, and distribution strategy |
+| **Headline Optimizer** | 10 headline variations with CTR predictions |
+| **Content Workflow** | Multi-day content workflow planning |
+| **Email Drip Sequence** | Automated email sequence generation |
+| **Image Prompts** | AI image prompt generation |
+| **Multi-Source Pipeline** | Orchestrated copy + visual pipeline using different providers per stage |
+| **Localize** | Content localization for different languages |
+| **RSS to Post** | Convert RSS articles to social posts |
+| **Brand Voice Builder** | Extract brand voice profile from example content |
 
-### Content Refinement Actions
+### Content Refinement
 
-The `/api/ai/refine` endpoint supports 12 actions:
+The Writing Assistant and inline toolbars offer 12 refinement actions on any content:
 
 | Action | Description |
 |--------|-------------|
-| `improve` | General quality improvement |
-| `expand` | Expand content with more detail |
-| `shorten` | Condense while keeping key points |
-| `formal` | Shift to professional/formal tone |
-| `casual` | Shift to conversational tone |
-| `persuasive` | Add persuasive elements and CTAs |
-| `storytelling` | Rewrite with narrative structure |
-| `simplify` | Simplify language and structure |
-| `add_hooks` | Add attention-grabbing hooks |
-| `add_cta` | Add or strengthen calls-to-action |
-| `emoji` | Add relevant emojis |
-| `bullet_points` | Convert to bullet point format |
+| **Improve** | General quality improvement |
+| **Expand** | Add more detail and depth |
+| **Shorten** | Condense while keeping key points |
+| **Formal** | Shift to professional tone |
+| **Casual** | Shift to conversational tone |
+| **Persuasive** | Add persuasive elements and CTAs |
+| **Storytelling** | Rewrite with narrative structure |
+| **Simplify** | Simplify language and structure |
+| **Add Hooks** | Add attention-grabbing hooks |
+| **Add CTA** | Add or strengthen calls-to-action |
+| **Emojis** | Add relevant emojis |
+| **Bullet Points** | Convert to bullet point format |
 
 ### Analysis & Optimization
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/ai/tone-analysis` | `toneAnalysis()` | Sentiment, readability, emotion map, brand alignment |
-| `/api/ai/score` | `contentScore()` | 1-100 score across engagement, clarity, CTA, emotion, platform fit |
-| `/api/ai/seo-keywords` | `seoKeywordResearch()` | 20 keywords with intent, difficulty, content type |
-| `/api/ai/hashtags` | `hashtagResearch()` | 30 hashtags in 3 volume tiers |
-| `/api/ai/seo-audit` | `seoAudit()` | 10-point page audit with scores and quick wins |
-| `/api/ai/preflight` | `preFlightCheck()` | Pre-publish brand/compliance review |
-| `/api/ai/ab-generate` | — | Generate A/B test variants |
-| `/api/ai/ab-analyze` | — | Analyze A/B test results |
+| Tool | Description |
+|------|-------------|
+| **Tone Analysis** | Sentiment, readability, emotion map, brand alignment |
+| **Content Score** | 1-100 score across engagement, clarity, CTA, emotion, platform fit |
+| **SEO Keywords** | 20 keywords with intent, difficulty, and content type recommendations |
+| **Hashtag Research** | 30 hashtags in 3 volume tiers |
+| **SEO Audit** | 10-point page audit with scores and quick wins |
+| **Pre-Flight Check** | Pre-publish brand and compliance review |
+| **A/B Variants** | Generate A/B test variants for existing content |
+| **A/B Analysis** | Analyze A/B test results with recommendations |
 
 ### Research & Strategy
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/ai/research` | `marketResearch()` | ICP, pain points, objections, 30-day plan |
-| `/api/ai/ideas` | `contentIdeas()` | 8 platform-specific ideas with hooks and CTAs |
-| `/api/ai/persona` | `audiencePersona()` | Detailed buyer persona with messaging dos/don'ts |
-| `/api/ai/competitor-analysis` | `competitorAnalysis()` | Deep competitive analysis with counter-strategies |
-| `/api/ai/social-strategy` | `socialStrategy()` | Full strategy with content pillars, schedule, KPIs |
-| `/api/ai/calendar` | `scheduleSuggestion()` | 14-day schedule with times, channels, KPIs |
-| `/api/ai/calendar-month` | `contentCalendarMonth()` | Full month content plan |
-| `/api/ai/smart-times` | `smartPostingTime()` | Platform-specific optimal posting schedule |
-| `/api/ai/campaign-optimizer` | `campaignOptimizer()` | Budget, channel mix, creative recommendations |
-| `/api/ai/report` | `weeklyReport()` | AI-generated performance summary from your data |
-| `/api/ai/insights` | `aiInsights()` | Proactive recommendations based on marketing data |
-| `/api/ai/smart-segments` | — | Segment recommendations |
-| `/api/ai/competitor-radar` | — | Competitive landscape analysis |
-| `/api/ai/funnel-advisor` | — | Funnel optimization advice |
-| `/api/ai/smart-utm` | — | Intelligent UTM link creation |
-| `/api/ai/standup` | — | Daily marketing standup digest |
-| `/api/ai/predict` | — | Content performance prediction |
+| Tool | Description |
+|------|-------------|
+| **Market Research** | ICP, pain points, objections, 30-day action plan |
+| **Content Ideas** | 8 platform-specific ideas with hooks and CTAs |
+| **Audience Persona** | Detailed buyer persona with messaging dos/don'ts |
+| **Competitor Analysis** | Deep competitive analysis with counter-strategies |
+| **Social Strategy** | Full strategy with content pillars, schedule, and KPIs |
+| **Schedule Suggestion** | 14-day schedule with times, channels, and KPIs |
+| **Monthly Calendar** | Full month content plan |
+| **Smart Posting Times** | Platform-specific optimal posting schedule |
+| **Campaign Optimizer** | Budget, channel mix, and creative recommendations |
+| **Weekly Report** | AI-generated performance summary from your data |
+| **AI Insights** | Proactive recommendations based on marketing data |
+| **Smart Segments** | Audience segment recommendations |
+| **Competitor Radar** | Competitive landscape monitoring |
+| **Funnel Advisor** | Funnel optimization advice |
+| **Smart UTM** | Intelligent UTM link creation |
+| **Daily Standup** | Daily marketing standup digest |
+| **Performance Prediction** | Content performance prediction |
 
-### Conversational AI
+## AI Chat
 
-| Endpoint | Description |
-|----------|-------------|
-| `POST /api/ai/chat` | Send message with conversation history |
-| `GET /api/ai/conversations` | List all conversations |
-| `GET /api/ai/conversations/{id}` | Get conversation with messages |
-| `DELETE /api/ai/conversations/{id}` | Delete conversation |
+A conversational AI assistant that has access to your marketing data (posts, campaigns, metrics, contacts). Use it to:
 
-### Shared AI Memory
+- Ask questions about your marketing performance
+- Get analysis grounded in real data
+- Generate production-ready content with brief controls (type, platform, tone, audience, goal)
+- Build strategy based on your actual business context
 
-All AI tools (chat, content generation, strategy, and analysis) now consume a shared memory layer that stores durable business facts, offers, constraints, and operating context.
+Conversations are saved with full history. See **[API Reference](api-reference.md)** for chat endpoints.
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/ai/shared-memory` | List global memory entries used by all AI tools |
-| `POST /api/ai/shared-memory` | Add a shared memory entry |
-| `PUT /api/ai/shared-memory/{id}` | Update a shared memory entry |
-| `DELETE /api/ai/shared-memory/{id}` | Remove a shared memory entry |
+## Shared AI Memory
 
-The chat system gathers real database context (posts, campaigns, metrics) to provide informed marketing advice.
+Store durable business facts, offers, constraints, and context that all AI tools share. When you add a shared memory entry (e.g., "We never discount below 20%" or "Our main competitor is Acme Corp"), every AI tool — content generation, strategy, chat — will factor it in.
 
-### Chat Content Brief Mode
+Manage shared memory from **AI Chat** or via the API.
 
-`POST /api/ai/chat` supports optional `content_brief`:
+## AI Writing Assistant
 
-```json
-{
-  "content_brief": {
-    "content_type": "social_post",
-    "platform": "instagram",
-    "tone": "friendly",
-    "audience": "startup founders",
-    "goal": "book demos"
-  }
-}
-```
+A floating side panel accessible from any page via the purple button in the bottom-right corner. Use it to refine content without leaving your current workflow:
 
-This activates a structured content directive so outputs are closer to publish-ready drafts.
+- **12 quick actions** — Improve, Expand, Shorten, Add Hooks, Add CTA, Bullet Points, Emojis, Simplify
+- **4 tone changes** — Formal, Casual, Persuasive, Storytelling
+- **Analysis** — Tone Analysis, Content Score, Headline Ideas
+- **Custom instructions** — Free-form AI refinement
+- **Apply to Field** — One-click to replace the active textarea with the AI output
+- Automatically detects the last-focused textarea on the current page
 
-## Onboarding AI Bootstrap
+## AI Inline Toolbar
 
-In addition to manual onboarding fields, the platform now supports website-driven bootstrap:
+Contextual AI action buttons appear above textarea fields in:
+- **Content Studio** post editor: Improve, Expand, Shorten, Persuasive, Emojis
+- **Email Compose** editor: Improve, Expand, Shorten, Persuasive
 
-- `POST /api/onboarding/discover` with `website_url`
-- Extracts title/meta/headings/content snapshot
-- AI infers a structured onboarding profile for review before saving/launching autopilot
+## Command Bar
+
+Press **Ctrl+K** from any page to open the command bar with 10 quick AI actions.
 
 ## Brand Voice
 
-Brand voice profiles control AI-generated content tone and style.
-
-### Configuration
-
-Create brand profiles at **Content Library > Brand Voice**:
+Control how AI generates content by creating a brand voice profile at **Content Library > Brand Voice**:
 
 | Field | Description |
 |-------|-------------|
-| `voice_tone` | Overall tone (e.g., "Professional yet approachable") |
-| `vocabulary` | Preferred words and phrases |
-| `avoid_words` | Words and phrases to avoid |
-| `example_content` | Sample content demonstrating the voice |
-| `target_audience` | Description of the target audience |
+| Voice Tone | Overall tone (e.g., "Professional yet approachable") |
+| Vocabulary | Preferred words and phrases |
+| Avoid Words | Words and phrases to avoid |
+| Example Content | Sample content demonstrating the voice |
+| Target Audience | Description of the target audience |
 
-Only one profile can be active at a time. The active profile is injected into all AI system prompts via `AiService::buildSystemPrompt()`.
+Only one profile can be active at a time. The active profile is applied to all AI-generated content automatically.
 
-## Integration Points
+## Onboarding AI Bootstrap
 
-### AI Studio (`pages/ai.js`)
-Full access to all 25+ AI tools organized in category tabs with a sticky output panel. Results can be copied or used directly.
+During onboarding, you can auto-populate your business profile by entering your website URL. The system extracts your site's content and uses AI to infer your industry, audience, goals, and channels. Review the results, then launch **AI Autopilot** to generate starter content automatically.
 
-### AI Writing Assistant (`pages/assistant.js`)
-Floating side panel accessible from any page via the purple FAB button (bottom-right). Features:
-- 12 quick refinement actions
-- 4 tone changes
-- Tone analysis, content score, headline ideas
-- Custom instruction input
-- One-click "Apply to Field" to replace active textarea content
-- Auto-detects the last-focused textarea on the current page
+## Fallback Mode
 
-### AI Inline Toolbar
-Contextual AI action buttons rendered above textarea fields:
-- **Content Studio** post body: Improve, Expand, Shorten, Persuasive, Emojis
-- **Email Compose** HTML body: Improve, Expand, Shorten, Persuasive
-- Wired globally in `app.js::initInlineAiToolbars()`
+If no AI API keys are configured, the platform returns deterministic placeholder output so all workflows remain functional. This lets you explore the full interface without paid API access.
 
-### Global Command Bar (`Ctrl+K`)
-Quick access to 10 AI actions from any page, organized in 2 groups.
+---
 
-### Dashboard AI
-- 6 AI quick action buttons
-- AI Insights card with proactive recommendations
-- Refresh on demand
+**Next:** [Content Management](content-management.md) | [Configuration](configuration.md) | [API Reference](api-reference.md)

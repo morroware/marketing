@@ -174,4 +174,8 @@ Campaign and content events can trigger webhooks:
 | `email.sent` | An email campaign is sent |
 | `cron.completed` | Cron job finishes |
 
-See [API Reference](api-reference.md) for webhook configuration.
+See **[API Reference](api-reference.md)** for webhook configuration and **[Automations & Workflows](automations-workflows.md)** for webhook setup details.
+
+---
+
+**Next:** [CRM & Contacts](crm-contacts.md) | [Email Marketing](email-marketing.md) | [Content Management](content-management.md)

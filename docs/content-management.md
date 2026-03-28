@@ -152,3 +152,7 @@ From the post list view, each post has a "Repurpose" button that sends the conte
 | `email` | Email newsletter/campaign content |
 | `ad_copy` | Advertisement copy |
 | `video_script` | Video script with timestamps |
+
+---
+
+**Next:** [Social Publishing](social-publishing.md) | [AI System](ai-system.md) | [Campaigns & Analytics](campaigns-analytics.md)

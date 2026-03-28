@@ -1,5 +1,7 @@
 # Configuration
 
+Complete reference for environment variables, deployment options, and runtime settings. For a guided walkthrough, see the **[Quick Start Guide](quick-start.md)**.
+
 ## Environment Variables
 
 The `.env` file is created by the web installer (`/install.php`) or can be created manually in the project root.
@@ -206,4 +208,8 @@ The cron runner executes:
 
 ## Fallback Mode
 
-If AI API keys are not configured, the application returns deterministic fallback output so all workflows remain functional. This allows the platform to be used without paid API access for testing and development.
+If AI API keys are not configured, the application returns deterministic fallback output so all workflows remain functional. This allows the platform to be explored without paid API access.
+
+---
+
+**Next:** [Quick Start](quick-start.md) | [AI System](ai-system.md) | [API Reference](api-reference.md)
