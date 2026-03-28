@@ -97,22 +97,57 @@ function initDragDrop() {
 
   canvas.addEventListener('dragover', (e) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
+    e.dataTransfer.dropEffect = e.dataTransfer.effectAllowed === 'move' ? 'move' : 'copy';
     dropZone.classList.add('drag-over');
+
+    // Show drop position indicator for reordering
+    if (e.dataTransfer.effectAllowed === 'move') {
+      const blocks = dropZone.querySelectorAll('.workflow-block');
+      blocks.forEach(b => b.classList.remove('drop-above', 'drop-below'));
+      const target = e.target.closest('.workflow-block');
+      if (target && !target.classList.contains('dragging')) {
+        const rect = target.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        target.classList.add(e.clientY < mid ? 'drop-above' : 'drop-below');
+      }
+    }
   });
 
   canvas.addEventListener('dragleave', (e) => {
     if (!canvas.contains(e.relatedTarget)) {
       dropZone.classList.remove('drag-over');
+      dropZone.querySelectorAll('.workflow-block').forEach(b => b.classList.remove('drop-above', 'drop-below'));
     }
   });
 
   canvas.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
+    dropZone.querySelectorAll('.workflow-block').forEach(b => b.classList.remove('drop-above', 'drop-below'));
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-      addBlock(data.type, data.event);
+
+      if (data.reorder) {
+        // Handle block reordering
+        const fromIdx = data.idx;
+        let toIdx = workflowBlocks.length - 1;
+        const target = e.target.closest('.workflow-block');
+        if (target && !target.classList.contains('dragging')) {
+          const targetIdx = parseInt(target.dataset.idx);
+          const rect = target.getBoundingClientRect();
+          const mid = rect.top + rect.height / 2;
+          toIdx = e.clientY < mid ? targetIdx : targetIdx + 1;
+          if (toIdx > fromIdx) toIdx--;
+        }
+        if (fromIdx !== toIdx && toIdx >= 0 && toIdx < workflowBlocks.length) {
+          const [block] = workflowBlocks.splice(fromIdx, 1);
+          workflowBlocks.splice(toIdx, 0, block);
+          selectedBlockIdx = toIdx;
+          renderCanvas();
+        }
+      } else {
+        addBlock(data.type, data.event);
+      }
     } catch {}
   });
 }
@@ -441,8 +476,8 @@ async function loadAutomations() {
       </div>
     `).join('');
 
-    // Event delegation
-    listView.addEventListener('click', handleListClick);
+    // Event delegation (use onclick to prevent accumulation on refresh)
+    listView.onclick = handleListClick;
   } catch (err) {
     toast('Failed to load automations: ' + err.message, 'error');
   }

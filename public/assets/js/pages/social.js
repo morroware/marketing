@@ -110,28 +110,28 @@ export async function refresh() {
         }).join('')
       : emptyState('&#128279;', 'No Social Accounts', 'Connect your social media accounts to start publishing.');
 
-    list.querySelectorAll('[data-test]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        btn.textContent = 'Testing...';
+    list.onclick = async (e) => {
+      const testBtn = e.target.closest('[data-test]');
+      if (testBtn) {
+        testBtn.disabled = true;
+        testBtn.textContent = 'Testing...';
         try {
-          const res = await api(`/api/social-accounts/${btn.dataset.test}/test`, { method: 'POST' });
+          const res = await api(`/api/social-accounts/${testBtn.dataset.test}/test`, { method: 'POST' });
           success(`Connection OK${res.info ? ': ' + res.info : ''}`);
         } catch (err) { error('Test failed: ' + err.message); }
-        finally { btn.disabled = false; btn.textContent = 'Test'; }
-      });
-    });
-
-    list.querySelectorAll('[data-delete]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+        finally { testBtn.disabled = false; testBtn.textContent = 'Test'; }
+        return;
+      }
+      const deleteBtn = e.target.closest('[data-delete]');
+      if (deleteBtn) {
         if (!await confirm('Remove Account', 'Are you sure you want to remove this social account?')) return;
         try {
-          await api(`/api/social-accounts/${btn.dataset.delete}`, { method: 'DELETE' });
+          await api(`/api/social-accounts/${deleteBtn.dataset.delete}`, { method: 'DELETE' });
           success('Account removed');
           refresh();
         } catch (err) { error(err.message); }
-      });
-    });
+      }
+    };
   } catch (err) {
     error('Failed to load social accounts: ' + err.message);
   }

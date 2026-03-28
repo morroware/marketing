@@ -26,28 +26,31 @@ async function loadSegments() {
       </div>
     </div>`).join('') || emptyState('&#128101;', 'No segments yet', 'Create your first segment above to group contacts by criteria.');
 
-    list.querySelectorAll('[data-view]').forEach((btn) => {
-      btn.addEventListener('click', () => viewSegmentContacts(parseInt(btn.dataset.view)));
-    });
-    list.querySelectorAll('[data-refresh]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    list.onclick = async (e) => {
+      const viewBtn = e.target.closest('[data-view]');
+      if (viewBtn) {
+        viewSegmentContacts(parseInt(viewBtn.dataset.view));
+        return;
+      }
+      const refreshBtn = e.target.closest('[data-refresh]');
+      if (refreshBtn) {
         try {
-          await api(`/api/segments/${btn.dataset.refresh}/recompute`, { method: 'POST', body: '{}' });
+          await api(`/api/segments/${refreshBtn.dataset.refresh}/recompute`, { method: 'POST', body: '{}' });
           success('Segment refreshed');
           loadSegments();
         } catch (e) { error(e.message); }
-      });
-    });
-    list.querySelectorAll('[data-del]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+        return;
+      }
+      const delBtn = e.target.closest('[data-del]');
+      if (delBtn) {
         if (!await confirm('Delete Segment', 'Are you sure you want to delete this segment? This cannot be undone.')) return;
         try {
-          await api(`/api/segments/${btn.dataset.del}`, { method: 'DELETE' });
+          await api(`/api/segments/${delBtn.dataset.del}`, { method: 'DELETE' });
           success('Segment deleted');
           loadSegments();
         } catch (e) { error(e.message); }
-      });
-    });
+      }
+    };
   } catch (e) {
     error('Failed to load segments: ' + e.message);
   }

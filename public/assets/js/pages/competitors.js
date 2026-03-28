@@ -24,16 +24,17 @@ export async function refresh() {
         </div>`).join('')
       : emptyState('&#128065;', 'No Competitors', 'Track your competitors to stay ahead of the market.');
 
-    list.querySelectorAll('[data-delete]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    list.onclick = async (e) => {
+      const deleteBtn = e.target.closest('[data-delete]');
+      if (deleteBtn) {
         if (!await confirm('Delete Competitor', 'Are you sure you want to delete this competitor?')) return;
         try {
-          await api(`/api/competitors/${btn.dataset.delete}`, { method: 'DELETE' });
+          await api(`/api/competitors/${deleteBtn.dataset.delete}`, { method: 'DELETE' });
           success('Competitor removed');
           refresh();
         } catch (err) { error(err.message); }
-      });
-    });
+      }
+    };
   } catch (err) {
     error('Failed to load competitors: ' + err.message);
   }

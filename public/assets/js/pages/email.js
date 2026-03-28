@@ -21,16 +21,17 @@ async function refreshLists() {
           </div>`).join('')
         : emptyState('&#9993;', 'No email lists', 'Create your first email list to start collecting subscribers.');
 
-      el.querySelectorAll('[data-delete-list]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
+      el.onclick = async (e) => {
+        const deleteBtn = e.target.closest('[data-delete-list]');
+        if (deleteBtn) {
           if (!await confirm('Delete List', 'Delete list and all its subscribers?')) return;
           try {
-            await api(`/api/email-lists/${btn.dataset.deleteList}`, { method: 'DELETE' });
+            await api(`/api/email-lists/${deleteBtn.dataset.deleteList}`, { method: 'DELETE' });
             success('List deleted');
             refresh();
           } catch (err) { error(err.message); }
-        });
-      });
+        }
+      };
     }
 
     // Populate list selects
@@ -62,15 +63,16 @@ async function refreshSubscribers() {
     </tr>`).join('')
       : tableEmpty(5, 'No subscribers in this list yet.');
 
-    table.querySelectorAll('[data-delete-sub]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    table.onclick = async (e) => {
+      const deleteBtn = e.target.closest('[data-delete-sub]');
+      if (deleteBtn) {
         try {
-          await api(`/api/subscribers/${btn.dataset.deleteSub}`, { method: 'DELETE' });
+          await api(`/api/subscribers/${deleteBtn.dataset.deleteSub}`, { method: 'DELETE' });
           success('Subscriber removed');
           refreshSubscribers();
         } catch (err) { error(err.message); }
-      });
-    });
+      }
+    };
   } catch (err) {
     error('Failed to load subscribers: ' + err.message);
   }
@@ -96,27 +98,27 @@ async function refreshEmailCampaigns() {
     </tr>`).join('')
       : tableEmpty(6, 'No email campaigns yet. Compose your first campaign to get started.');
 
-    table.querySelectorAll('[data-send]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    table.onclick = async (e) => {
+      const sendBtn = e.target.closest('[data-send]');
+      if (sendBtn) {
         if (!await confirm('Send Campaign', 'Send this campaign to all subscribers?', { okText: 'Send', okClass: 'btn-success' })) return;
         try {
-          const result = await api(`/api/email-campaigns/${btn.dataset.send}/send`, { method: 'POST' });
+          const result = await api(`/api/email-campaigns/${sendBtn.dataset.send}/send`, { method: 'POST' });
           success(`Sent to ${result.sent || 0} subscribers`);
           refreshEmailCampaigns();
         } catch (err) { error(err.message); }
-      });
-    });
-
-    table.querySelectorAll('[data-delete-ec]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+        return;
+      }
+      const deleteBtn = e.target.closest('[data-delete-ec]');
+      if (deleteBtn) {
         if (!await confirm('Delete Campaign', 'Delete this email campaign?')) return;
         try {
-          await api(`/api/email-campaigns/${btn.dataset.deleteEc}`, { method: 'DELETE' });
+          await api(`/api/email-campaigns/${deleteBtn.dataset.deleteEc}`, { method: 'DELETE' });
           success('Email campaign deleted');
           refreshEmailCampaigns();
         } catch (err) { error(err.message); }
-      });
-    });
+      }
+    };
   } catch (err) {
     error('Failed to load email campaigns: ' + err.message);
   }
@@ -142,10 +144,11 @@ async function refreshEmailTemplates() {
       </div>
     </div>`).join('') || '<p class="text-muted">No email templates found</p>';
 
-    list.querySelectorAll('[data-preview-tpl]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    list.onclick = async (e) => {
+      const previewBtn = e.target.closest('[data-preview-tpl]');
+      if (previewBtn) {
         try {
-          const tpl = await api(`/api/email-templates/${btn.dataset.previewTpl}`);
+          const tpl = await api(`/api/email-templates/${previewBtn.dataset.previewTpl}`);
           const modal = $('emailTplModal');
           const body = $('emailTplModalBody');
           if (modal && body) {
@@ -158,33 +161,30 @@ async function refreshEmailTemplates() {
             modal.classList.add('visible');
           }
         } catch (e) { error(e.message); }
-      });
-    });
-
-    list.querySelectorAll('[data-use-tpl]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+        return;
+      }
+      const useBtn = e.target.closest('[data-use-tpl]');
+      if (useBtn) {
         const htmlField = document.querySelector('#emailComposeForm [name="body_html"]');
         const textField = document.querySelector('#emailComposeForm [name="body_text"]');
         const subjectField = document.querySelector('#emailComposeForm [name="subject"]');
-        if (htmlField) htmlField.value = decodeURIComponent(btn.dataset.html || '');
-        if (textField) textField.value = decodeURIComponent(btn.dataset.text || '');
-        if (subjectField && !subjectField.value) subjectField.value = decodeURIComponent(btn.dataset.subject || '');
-        // Switch to compose tab
+        if (htmlField) htmlField.value = decodeURIComponent(useBtn.dataset.html || '');
+        if (textField) textField.value = decodeURIComponent(useBtn.dataset.text || '');
+        if (subjectField && !subjectField.value) subjectField.value = decodeURIComponent(useBtn.dataset.subject || '');
         document.querySelector('[data-tab="email-compose"]')?.click();
         success('Template loaded into composer');
-      });
-    });
-
-    list.querySelectorAll('[data-del-tpl]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+        return;
+      }
+      const delBtn = e.target.closest('[data-del-tpl]');
+      if (delBtn) {
         if (!await confirm('Delete Template', 'Delete this template?')) return;
         try {
-          await api(`/api/email-templates/${btn.dataset.delTpl}`, { method: 'DELETE' });
+          await api(`/api/email-templates/${delBtn.dataset.delTpl}`, { method: 'DELETE' });
           success('Template deleted');
           refreshEmailTemplates();
         } catch (e) { error(e.message); }
-      });
-    });
+      }
+    };
   } catch (e) {
     error('Failed to load email templates: ' + e.message);
   }

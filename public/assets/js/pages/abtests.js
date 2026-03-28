@@ -38,7 +38,8 @@ export function init() {
         if (item?.variations) {
           const varBContent = form.querySelector('[name="variant_b_content"]');
           const varBName = form.querySelector('[name="variant_b_name"]');
-          if (varBContent) varBContent.value = item.variations.slice(0, 500);
+          const variationText = Array.isArray(item.variations) ? item.variations[0] : item.variations;
+          if (varBContent) varBContent.value = (typeof variationText === 'object' ? (variationText.body || variationText.content || JSON.stringify(variationText)) : String(variationText || '')).slice(0, 500);
           if (varBName && varBName.value === 'Variation') varBName.value = 'AI Variation';
           toast('AI variant generated', 'success');
         }

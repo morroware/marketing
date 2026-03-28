@@ -28,26 +28,26 @@ async function refreshTemplates() {
         </div>`).join('')
       : emptyState('&#128196;', 'No Templates', 'Create reusable content templates to speed up your workflow.');
 
-    list.querySelectorAll('[data-clone-tpl]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    list.onclick = async (e) => {
+      const cloneBtn = e.target.closest('[data-clone-tpl]');
+      if (cloneBtn) {
         try {
-          await api(`/api/templates/${btn.dataset.cloneTpl}/clone`, { method: 'POST' });
+          await api(`/api/templates/${cloneBtn.dataset.cloneTpl}/clone`, { method: 'POST' });
           success('Template cloned');
           refreshTemplates();
         } catch (err) { error(err.message); }
-      });
-    });
-
-    list.querySelectorAll('[data-delete-tpl]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+        return;
+      }
+      const deleteBtn = e.target.closest('[data-delete-tpl]');
+      if (deleteBtn) {
         if (!await confirm('Delete Template', 'Are you sure you want to delete this template?')) return;
         try {
-          await api(`/api/templates/${btn.dataset.deleteTpl}`, { method: 'DELETE' });
+          await api(`/api/templates/${deleteBtn.dataset.deleteTpl}`, { method: 'DELETE' });
           success('Template deleted');
           refreshTemplates();
         } catch (err) { error(err.message); }
-      });
-    });
+      }
+    };
   } catch (err) {
     error('Failed to load templates: ' + err.message);
   }
@@ -75,26 +75,26 @@ async function refreshBrands() {
         </div>`).join('')
       : emptyState('&#127912;', 'No Brand Profiles', 'Define your brand voice to keep AI-generated content consistent.');
 
-    list.querySelectorAll('[data-activate]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    list.onclick = async (e) => {
+      const activateBtn = e.target.closest('[data-activate]');
+      if (activateBtn) {
         try {
-          await api(`/api/brand-profiles/${btn.dataset.activate}/activate`, { method: 'POST' });
+          await api(`/api/brand-profiles/${activateBtn.dataset.activate}/activate`, { method: 'POST' });
           success('Brand profile activated');
           refreshBrands();
         } catch (err) { error(err.message); }
-      });
-    });
-
-    list.querySelectorAll('[data-delete-brand]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+        return;
+      }
+      const deleteBtn = e.target.closest('[data-delete-brand]');
+      if (deleteBtn) {
         if (!await confirm('Delete Brand Profile', 'Are you sure you want to delete this brand profile?')) return;
         try {
-          await api(`/api/brand-profiles/${btn.dataset.deleteBrand}`, { method: 'DELETE' });
+          await api(`/api/brand-profiles/${deleteBtn.dataset.deleteBrand}`, { method: 'DELETE' });
           success('Brand profile deleted');
           refreshBrands();
         } catch (err) { error(err.message); }
-      });
-    });
+      }
+    };
   } catch (err) {
     error('Failed to load brand profiles: ' + err.message);
   }
@@ -122,16 +122,17 @@ async function refreshMedia() {
         }).join('')
       : emptyState('&#128247;', 'No Media', 'Upload images and files to use in your content.');
 
-    grid.querySelectorAll('[data-delete-media]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    grid.onclick = async (e) => {
+      const deleteBtn = e.target.closest('[data-delete-media]');
+      if (deleteBtn) {
         if (!await confirm('Delete File', 'Are you sure you want to delete this file?')) return;
         try {
-          await api(`/api/media/${btn.dataset.deleteMedia}`, { method: 'DELETE' });
+          await api(`/api/media/${deleteBtn.dataset.deleteMedia}`, { method: 'DELETE' });
           success('File deleted');
           refreshMedia();
         } catch (err) { error(err.message); }
-      });
-    });
+      }
+    };
   } catch (err) {
     error('Failed to load media: ' + err.message);
   }
