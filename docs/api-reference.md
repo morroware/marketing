@@ -392,4 +392,8 @@ Requests include:
 
 ## AI Endpoints
 
-See [AI System documentation](ai-system.md) for the complete list of 60+ AI endpoints with parameters and response formats.
+See **[AI System](ai-system.md)** for the complete list of 60+ AI endpoints with parameters and response formats.
+
+---
+
+**Next:** [AI System](ai-system.md) | [Configuration](configuration.md) | [Quick Start](quick-start.md)

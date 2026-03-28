@@ -2,7 +2,9 @@
 
 ## Overview
 
-The social publishing system supports 15 platforms through a unified `publish()` interface in `SocialPublisher.php`. Posts can be published immediately, scheduled via cron, or managed through the publish queue.
+The social publishing system supports 15 platforms through a unified interface. Posts can be published immediately, scheduled via cron, or managed through the publish queue.
+
+See **[Content Management](content-management.md)** for creating posts and **[Configuration](configuration.md)** for cron setup.
 
 ## Supported Platforms
 
@@ -75,14 +77,13 @@ When a post status changes to `published`, the scheduler detects associated soci
 Post (status: scheduled, scheduled_for: datetime)
      │
      ▼ (cron runs, time reached)
-Scheduler::publishDuePosts()
+Scheduler checks for due posts
      │
      ├── Find matching social accounts
      ├── For each account:
-     │   └── SocialPublisher::publish(post, account)
-     │       ├── Route to platform-specific method
-     │       ├── Handle media upload if needed
-     │       └── Return external_id or error
+     │   ├── Route to platform-specific publisher
+     │   ├── Handle media upload if needed
+     │   └── Return external_id or error
      └── Log result in publish_log
 ```
 
@@ -164,3 +165,7 @@ Every publish attempt is logged:
 | `external_id` | Platform's post ID |
 | `error_message` | Error details (if failed) |
 | `published_at` | Timestamp |
+
+---
+
+**Next:** [Email Marketing](email-marketing.md) | [Content Management](content-management.md) | [AI System](ai-system.md)

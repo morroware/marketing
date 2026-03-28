@@ -292,3 +292,7 @@ Mark items as curated for later use:
 PATCH /api/rss-items/{id}
 { "is_curated": true }
 ```
+
+---
+
+**Next:** [Content Management](content-management.md) | [CRM & Contacts](crm-contacts.md) | [API Reference](api-reference.md)

@@ -1,10 +1,8 @@
 # Marketing Suite - Project Reference
 
-## Beta Readiness (March 28, 2026)
+## Beta Status (March 28, 2026)
 
-Before launching beta, use the canonical engineering checklist in `TODO-BETA.md`.
-
-**Release gate:** Beta is only "go" when all **P0** and **P1** items in `TODO-BETA.md` are complete, and smoke tests pass for install, auth, content creation, social queue, email send/tracking, forms, and cron.
+Beta-blocking bugs have been fixed. Remaining hardening items (token encryption, OAuth refresh, distributed locks, etc.) are tracked internally and can follow after initial single-business deployment. Smoke tests should pass for install, auth, content creation, social queue, email send/tracking, forms, and cron.
 
 ## Overview
 

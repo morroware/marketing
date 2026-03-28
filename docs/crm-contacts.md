@@ -187,3 +187,9 @@ When a form submission includes an email field and the form has a `ContactReposi
 3. If the form has `tag_on_submit`, the tag is applied
 4. An activity is logged: `form_submitted`
 5. Automation rules fire for `form.submitted` and `contact.created` events
+
+See **[Forms & Landing Pages](forms-landing-pages.md)** for form setup and **[Automations & Workflows](automations-workflows.md)** for trigger configuration.
+
+---
+
+**Next:** [Forms & Landing Pages](forms-landing-pages.md) | [Campaigns & Analytics](campaigns-analytics.md) | [Automations & Workflows](automations-workflows.md)

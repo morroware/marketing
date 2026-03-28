@@ -4,15 +4,6 @@
 
 Built-in email marketing with zero-dependency SMTP client, list management, campaign composer, template system, and open/click tracking.
 
-## Architecture
-
-```
-EmailService.php         — SMTP client, sending, tracking
-EmailTemplates.php       — Template management (6 built-in)
-routes/email.php         — API endpoints for lists, subscribers, campaigns
-routes/email_templates.php — Template CRUD endpoints
-```
-
 ## Email Lists
 
 Lists organize subscribers for targeted campaigns.
@@ -229,3 +220,9 @@ Generate a complete email drip sequence:
 POST /api/ai/drip-sequence
 { "goal": "onboard new users", "audience": "SaaS trial users", "count": 5 }
 ```
+
+See **[AI System](ai-system.md)** for the full list of AI content tools.
+
+---
+
+**Next:** [Campaigns & Analytics](campaigns-analytics.md) | [Automations & Workflows](automations-workflows.md) | [Configuration](configuration.md)

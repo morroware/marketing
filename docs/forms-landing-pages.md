@@ -200,3 +200,7 @@ Returns 30-day click timeline with daily counts. Each click logs:
 - User agent
 - Referer
 - Timestamp
+
+---
+
+**Next:** [CRM & Contacts](crm-contacts.md) | [Automations & Workflows](automations-workflows.md) | [Campaigns & Analytics](campaigns-analytics.md)

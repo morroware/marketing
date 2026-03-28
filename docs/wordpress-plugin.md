@@ -183,3 +183,7 @@ The plugin communicates with these Marketing Suite endpoints:
 ## License
 
 GPL-2.0-or-later
+
+---
+
+**Next:** [Configuration](configuration.md) | [AI System](ai-system.md) | [API Reference](api-reference.md)
