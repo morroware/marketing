@@ -18,6 +18,8 @@ require $srcDir . '/AiStrategyTools.php';
 require $srcDir . '/AiChatService.php';
 require $srcDir . '/AiMemoryEngine.php';
 require $srcDir . '/AiOrchestrator.php';
+require $srcDir . '/AiSearchEngine.php';
+require $srcDir . '/AiAgentSystem.php';
 require $srcDir . '/MediaLibrary.php';
 require $srcDir . '/Analytics.php';
 require $srcDir . '/Webhooks.php';
@@ -151,6 +153,8 @@ $memoryEngine = new AiMemoryEngine($pdo, $ai);
 $ai->setMemoryEngine($memoryEngine);
 $chatService->setMemoryEngine($memoryEngine);
 $orchestrator = new AiOrchestrator($pdo, $ai, $contentTools, $analysisTools, $strategyTools, $memoryEngine);
+$searchEngine = new AiSearchEngine($pdo, $ai, $memoryEngine);
+$agentSystem  = new AiAgentSystem($pdo, $ai, $searchEngine, $memoryEngine, $contentTools, $analysisTools, $strategyTools);
 
 $activeBrand = $brandProfiles->getActive();
 if ($activeBrand && method_exists($ai, 'setBrandVoice')) {
@@ -433,7 +437,7 @@ if (str_starts_with($path, '/api/')) {
     register_rss_routes($router, $rssFetcher);
     register_webhook_routes($router, $webhooks);
     register_cron_routes($router, $scheduler);
-    register_ai_routes($router, $ai, $contentTools, $analysisTools, $strategyTools, $chatService, $aiLogs, $analytics, $posts, $campaigns, $pdo, $memoryEngine, $orchestrator);
+    register_ai_routes($router, $ai, $contentTools, $analysisTools, $strategyTools, $chatService, $aiLogs, $analytics, $posts, $campaigns, $pdo, $memoryEngine, $orchestrator, $searchEngine, $agentSystem);
     register_utm_routes($router, $utmBuilder, $linkShortener);
     register_link_routes($router, $linkShortener);
     register_landing_page_routes($router, $landingPages);

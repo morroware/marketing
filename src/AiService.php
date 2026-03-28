@@ -394,6 +394,83 @@ final class AiService
         return $clean;
     }
 
+    /* ------------------------------------------------------------------ */
+    /*  Model Routing — task-type-specific provider/model selection       */
+    /* ------------------------------------------------------------------ */
+
+    /** Recognized task types for model routing. */
+    public const MODEL_TASK_TYPES = [
+        'copywriting'   => 'Content writing (posts, blogs, emails, ads)',
+        'analysis'      => 'Analysis & scoring (tone, SEO, quality)',
+        'strategy'      => 'Strategy & planning (campaigns, calendars)',
+        'research'      => 'Research & intelligence gathering',
+        'creative'      => 'Creative & visual (image prompts, concepts)',
+        'chat'          => 'Conversational AI chat',
+        'extraction'    => 'Data extraction & summarization (learnings)',
+        'image'         => 'Image generation (DALL-E, Flux, Imagen)',
+    ];
+
+    /**
+     * Get the configured provider/model for a given task type.
+     * Falls back to the default provider if not configured.
+     */
+    public function getModelForTask(string $taskType, ?PDO $pdo = null): array
+    {
+        if ($pdo !== null) {
+            $stmt = $pdo->prepare("SELECT provider, model FROM ai_model_routing WHERE task_type = :type");
+            $stmt->execute([':type' => $taskType]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row && $row['provider'] !== '' && $row['model'] !== '') {
+                return ['provider' => $row['provider'], 'model' => $row['model']];
+            }
+        }
+        return ['provider' => $this->provider, 'model' => null];
+    }
+
+    /**
+     * Generate using the model routed for a specific task type.
+     */
+    public function generateForTask(string $taskType, string $system, string $prompt, ?PDO $pdo = null, int $maxTokens = 4096, float $temperature = 0.7): string
+    {
+        $routing = $this->getModelForTask($taskType, $pdo);
+        return $this->generateAdvanced($system, $prompt, $routing['provider'], $routing['model'], $maxTokens, $temperature);
+    }
+
+    /**
+     * Get all model routing configurations.
+     */
+    public static function getModelRouting(PDO $pdo): array
+    {
+        $stmt = $pdo->query("SELECT task_type, provider, model, label, updated_at FROM ai_model_routing ORDER BY task_type");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Save a model routing configuration.
+     */
+    public static function saveModelRouting(PDO $pdo, string $taskType, string $provider, string $model, string $label = ''): void
+    {
+        $now = gmdate(DATE_ATOM);
+        $stmt = $pdo->prepare(
+            "INSERT INTO ai_model_routing (task_type, provider, model, label, updated_at)
+             VALUES (:type, :provider, :model, :label, :updated)
+             ON CONFLICT(task_type) DO UPDATE SET provider = :provider2, model = :model2, label = :label2, updated_at = :updated2"
+        );
+        $stmt->execute([
+            ':type' => $taskType,
+            ':provider' => $provider, ':model' => $model, ':label' => $label, ':updated' => $now,
+            ':provider2' => $provider, ':model2' => $model, ':label2' => $label, ':updated2' => $now,
+        ]);
+    }
+
+    /**
+     * Delete a model routing configuration (reverts to default).
+     */
+    public static function deleteModelRouting(PDO $pdo, string $taskType): void
+    {
+        $pdo->prepare("DELETE FROM ai_model_routing WHERE task_type = :type")->execute([':type' => $taskType]);
+    }
+
     private function providerHasKey(string $provider): bool
     {
         return match ($provider) {

@@ -16,6 +16,8 @@ function register_ai_routes(
     PDO $pdo,
     ?AiMemoryEngine $memoryEngine = null,
     ?AiOrchestrator $orchestrator = null,
+    ?AiSearchEngine $searchEngine = null,
+    ?AiAgentSystem $agentSystem = null,
 ): void {
 
     // Helper: log activity + auto-extract learnings
@@ -865,5 +867,163 @@ function register_ai_routes(
     $router->get('/api/ai/pipelines/tools', function () use ($orchestrator) {
         if (!$orchestrator) { json_response(['items' => []]); return; }
         json_response(['items' => $orchestrator->getToolRegistry()]);
+    });
+
+    /* ================================================================== */
+    /*  AI SEARCH — Unified search across data, web, and websites          */
+    /* ================================================================== */
+
+    $router->post('/api/ai/search', function () use ($searchEngine, $memoryEngine, $pdo, $logAi) {
+        if (!$searchEngine) { json_response(['error' => 'Search engine not available'], 500); return; }
+        $p = request_json();
+        $query = trim((string)($p['query'] ?? ''));
+        if ($query === '') { json_response(['error' => 'Missing: query'], 422); return; }
+
+        $sources = $p['sources'] ?? ['internal'];
+        $url = trim((string)($p['url'] ?? ''));
+
+        $results = $searchEngine->search($query, $sources, $url);
+
+        // Save search to history
+        try {
+            $stmt = $pdo->prepare("INSERT INTO ai_search_history (query, sources, url, results_count, summary, created_at) VALUES (:q, :s, :u, :c, :sum, :now)");
+            $stmt->execute([
+                ':q' => $query, ':s' => implode(',', $sources), ':u' => $url,
+                ':c' => $results['total_results'], ':sum' => mb_substr($results['summary'] ?? '', 0, 500),
+                ':now' => gmdate(DATE_ATOM),
+            ]);
+        } catch (\PDOException $e) { /* ignore */ }
+
+        $logAi('search', 'research', "query={$query} sources=" . implode(',', $sources), $results['summary'] ?? '');
+        json_response(['item' => $results]);
+    });
+
+    $router->get('/api/ai/search/history', function () use ($pdo) {
+        $limit = max(1, min(50, (int)($_GET['limit'] ?? 20)));
+        $stmt = $pdo->prepare("SELECT id, query, sources, url, results_count, summary, created_at FROM ai_search_history ORDER BY created_at DESC LIMIT :lim");
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        json_response(['items' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+    });
+
+    /* ================================================================== */
+    /*  AI AGENTS — Multi-agent task system                                */
+    /* ================================================================== */
+
+    // Get agent types
+    $router->get('/api/ai/agents/types', function () use ($agentSystem) {
+        if (!$agentSystem) { json_response(['items' => []]); return; }
+        $types = $agentSystem->getAgentTypes();
+        $items = [];
+        foreach ($types as $id => $type) {
+            $items[] = array_merge(['id' => $id], $type);
+        }
+        json_response(['items' => $items]);
+    });
+
+    // Create a new agent task
+    $router->post('/api/ai/agents/tasks', function () use ($agentSystem, $analytics) {
+        if (!$agentSystem) { json_response(['error' => 'Agent system not available'], 500); return; }
+        $p = request_json();
+        $goal = trim((string)($p['goal'] ?? ''));
+        if ($goal === '') { json_response(['error' => 'Missing: goal'], 422); return; }
+
+        $context = trim((string)($p['context'] ?? ''));
+        $modelConfig = $p['model_config'] ?? [];
+        $autoApprove = (bool)($p['auto_approve'] ?? false);
+
+        $result = $agentSystem->createTask($goal, $context, $modelConfig, $autoApprove);
+        $analytics->track('ai.agent_task', 'ai', 0, ['steps' => $result['steps_total'] ?? 0]);
+        json_response(['item' => $result], 201);
+    });
+
+    // List recent agent tasks
+    $router->get('/api/ai/agents/tasks', function () use ($agentSystem) {
+        if (!$agentSystem) { json_response(['items' => []]); return; }
+        $limit = max(1, min(50, (int)($_GET['limit'] ?? 20)));
+        json_response(['items' => $agentSystem->getRecentTasks($limit)]);
+    });
+
+    // Get task details
+    $router->get('/api/ai/agents/tasks/{id}', function (array $params) use ($agentSystem) {
+        if (!$agentSystem) { json_response(['error' => 'Not available'], 500); return; }
+        $id = (int)($params['id'] ?? 0);
+        $task = $agentSystem->getTaskDetails($id);
+        if (!$task) { json_response(['error' => 'Not found'], 404); return; }
+        json_response(['item' => $task]);
+    });
+
+    // Execute next step
+    $router->post('/api/ai/agents/tasks/{id}/execute', function (array $params) use ($agentSystem) {
+        if (!$agentSystem) { json_response(['error' => 'Not available'], 500); return; }
+        $id = (int)($params['id'] ?? 0);
+        $result = $agentSystem->executeNextStep($id);
+        json_response(['item' => $result]);
+    });
+
+    // Execute all remaining steps
+    $router->post('/api/ai/agents/tasks/{id}/execute-all', function (array $params) use ($agentSystem) {
+        if (!$agentSystem) { json_response(['error' => 'Not available'], 500); return; }
+        $id = (int)($params['id'] ?? 0);
+        $result = $agentSystem->executeAll($id);
+        json_response(['item' => $result]);
+    });
+
+    // Approve step
+    $router->post('/api/ai/agents/tasks/{id}/approve', function (array $params) use ($agentSystem) {
+        if (!$agentSystem) { json_response(['error' => 'Not available'], 500); return; }
+        $id = (int)($params['id'] ?? 0);
+        $p = request_json();
+        $result = $agentSystem->approveStep($id, trim((string)($p['feedback'] ?? '')));
+        json_response(['item' => $result]);
+    });
+
+    // Reject/revise step
+    $router->post('/api/ai/agents/tasks/{id}/reject', function (array $params) use ($agentSystem) {
+        if (!$agentSystem) { json_response(['error' => 'Not available'], 500); return; }
+        $id = (int)($params['id'] ?? 0);
+        $p = request_json();
+        $result = $agentSystem->rejectStep($id, trim((string)($p['reason'] ?? '')));
+        json_response(['item' => $result]);
+    });
+
+    // Cancel task
+    $router->post('/api/ai/agents/tasks/{id}/cancel', function (array $params) use ($agentSystem) {
+        if (!$agentSystem) { json_response(['error' => 'Not available'], 500); return; }
+        $id = (int)($params['id'] ?? 0);
+        $result = $agentSystem->cancelTask($id);
+        json_response(['item' => $result]);
+    });
+
+    /* ================================================================== */
+    /*  MODEL ROUTING — Task-type-specific provider/model configuration    */
+    /* ================================================================== */
+
+    $router->get('/api/ai/model-routing', function () use ($pdo, $ai) {
+        $routing = AiService::getModelRouting($pdo);
+        $taskTypes = AiService::MODEL_TASK_TYPES;
+        json_response(['item' => [
+            'routing' => $routing,
+            'task_types' => $taskTypes,
+            'providers' => $ai->providerStatus(),
+        ]]);
+    });
+
+    $router->post('/api/ai/model-routing', function () use ($pdo) {
+        $p = request_json();
+        $taskType = trim((string)($p['task_type'] ?? ''));
+        $provider = trim((string)($p['provider'] ?? ''));
+        $model = trim((string)($p['model'] ?? ''));
+        if ($taskType === '' || $provider === '') {
+            json_response(['error' => 'Missing: task_type and provider'], 422); return;
+        }
+        AiService::saveModelRouting($pdo, $taskType, $provider, $model, $p['label'] ?? '');
+        json_response(['ok' => true, 'item' => AiService::getModelRouting($pdo)]);
+    });
+
+    $router->delete('/api/ai/model-routing/{taskType}', function (array $params) use ($pdo) {
+        $taskType = $params['taskType'] ?? '';
+        AiService::deleteModelRouting($pdo, $taskType);
+        json_response(['ok' => true]);
     });
 }
