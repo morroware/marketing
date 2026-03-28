@@ -4,6 +4,8 @@
  */
 
 import { registerPage } from './core/router.js';
+import { maybeStartWelcomeTour } from './core/guidedTour.js';
+import { initHelpWidget } from './core/helpWidget.js';
 import * as login from './pages/login.js';
 import * as dashboard from './pages/dashboard.js';
 import * as content from './pages/content.js';
@@ -85,6 +87,10 @@ function initAll() {
   onboarding.init();
   assistant.init();
   initInlineAiToolbars();
+
+  // Initialize help widget and auto-start welcome tour for new users
+  initHelpWidget();
+  maybeStartWelcomeTour();
 }
 
 // Inline AI toolbar — attach refine actions to textareas

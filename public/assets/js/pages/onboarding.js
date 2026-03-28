@@ -1,18 +1,21 @@
 /**
  * Onboarding wizard — collects business profile data, then launches AI Autopilot.
+ * Improved with progress persistence, animated transitions, and better validation.
  */
 
 import { api } from '../core/api.js';
-import { $, escapeHtml } from '../core/utils.js';
+import { $ } from '../core/utils.js';
 import { success, error } from '../core/toast.js';
 import { navigate } from '../core/router.js';
 
 let currentStep = 1;
 const totalSteps = 5;
+const STORAGE_KEY = 'onboarding_draft';
 
 export async function refresh() {
   currentStep = 1;
-  showStep(1);
+  restoreDraft();
+  showStep(currentStep);
 }
 
 export function init() {
@@ -20,6 +23,7 @@ export function init() {
   document.querySelectorAll('.onboard-next').forEach(btn => {
     btn.addEventListener('click', () => {
       if (validateStep(currentStep)) {
+        saveDraft();
         currentStep++;
         showStep(currentStep);
       }
@@ -28,6 +32,7 @@ export function init() {
 
   document.querySelectorAll('.onboard-prev').forEach(btn => {
     btn.addEventListener('click', () => {
+      saveDraft();
       currentStep--;
       showStep(currentStep);
     });
@@ -75,12 +80,18 @@ export function init() {
           method: 'POST',
           body: JSON.stringify({ onboarding_completed: true }),
         });
+        clearDraft();
         navigate('dashboard');
       } catch (err) {
         error(err.message);
       }
     });
   }
+
+  // Auto-save on input changes
+  document.querySelectorAll('#page-onboarding input, #page-onboarding textarea, #page-onboarding select').forEach(el => {
+    el.addEventListener('change', saveDraft);
+  });
 }
 
 function showStep(step) {
@@ -88,9 +99,15 @@ function showStep(step) {
   document.querySelectorAll('.onboard-step').forEach(el => {
     el.style.display = 'none';
   });
-  // Show current step
+  // Show current step with animation
   const stepEl = $('onboardStep' + step);
-  if (stepEl) stepEl.style.display = '';
+  if (stepEl) {
+    stepEl.style.display = '';
+    // Re-trigger animation
+    stepEl.style.animation = 'none';
+    stepEl.offsetHeight; // force reflow
+    stepEl.style.animation = '';
+  }
 
   // Update progress bar
   const progressFill = $('onboardProgressFill');
@@ -104,6 +121,9 @@ function showStep(step) {
     el.classList.toggle('active', s === step);
     el.classList.toggle('completed', s < step);
   });
+
+  // Scroll to top of onboarding container
+  document.querySelector('.onboard-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function validateStep(step) {
@@ -112,11 +132,87 @@ function validateStep(step) {
     if (desc && desc.value.trim().length < 10) {
       error('Please describe your business (at least 10 characters)');
       desc.focus();
+      desc.classList.add('input-error');
+      setTimeout(() => desc.classList.remove('input-error'), 2000);
       return false;
     }
   }
   return true;
 }
+
+/* ================================================================== */
+/*  DRAFT PERSISTENCE                                                  */
+/* ================================================================== */
+
+function saveDraft() {
+  try {
+    const data = {
+      step: currentStep,
+      business_description: $('obBusinessDesc')?.value || '',
+      products_services: $('obProducts')?.value || '',
+      website_url: $('obWebsite')?.value || '',
+      unique_selling_points: $('obUSPs')?.value || '',
+      target_audience: $('obAudience')?.value || '',
+      content_examples: $('obExamples')?.value || '',
+      budget_range: $('obBudget')?.value || '',
+      competitors: [],
+      goals: [],
+      platforms: [],
+    };
+
+    document.querySelectorAll('.competitor-input').forEach(input => {
+      if (input.value.trim()) data.competitors.push(input.value.trim());
+    });
+    document.querySelectorAll('.goal-checkbox:checked').forEach(cb => {
+      data.goals.push(cb.value);
+    });
+    document.querySelectorAll('.platform-checkbox:checked').forEach(cb => {
+      data.platforms.push(cb.value);
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    // Silent fail for storage issues
+  }
+}
+
+function restoreDraft() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+
+    if ($('obBusinessDesc') && data.business_description) $('obBusinessDesc').value = data.business_description;
+    if ($('obProducts') && data.products_services) $('obProducts').value = data.products_services;
+    if ($('obWebsite') && data.website_url) $('obWebsite').value = data.website_url;
+    if ($('obUSPs') && data.unique_selling_points) $('obUSPs').value = data.unique_selling_points;
+    if ($('obAudience') && data.target_audience) $('obAudience').value = data.target_audience;
+    if ($('obExamples') && data.content_examples) $('obExamples').value = data.content_examples;
+    if ($('obBudget') && data.budget_range) $('obBudget').value = data.budget_range;
+
+    if (data.competitors?.length) {
+      const fields = document.querySelectorAll('.competitor-input');
+      data.competitors.slice(0, fields.length).forEach((v, i) => { fields[i].value = v; });
+    }
+
+    applyChecklistValues('.goal-checkbox', data.goals?.join(', '));
+    applyChecklistValues('.platform-checkbox', data.platforms?.join(', '));
+
+    if (data.step > 1 && data.step <= totalSteps) {
+      currentStep = data.step;
+    }
+  } catch (e) {
+    // Silent fail
+  }
+}
+
+function clearDraft() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+/* ================================================================== */
+/*  DATA COLLECTION                                                    */
+/* ================================================================== */
 
 function collectFormData() {
   const competitors = [];
@@ -149,6 +245,10 @@ function collectFormData() {
   };
 }
 
+/* ================================================================== */
+/*  AUTOPILOT LAUNCH                                                   */
+/* ================================================================== */
+
 async function launchAutopilot() {
   const btn = $('launchAutopilot');
   if (!btn) return;
@@ -171,21 +271,34 @@ async function launchAutopilot() {
     // Queue autopilot pipeline to run in background and continue immediately.
     await api('/api/autopilot/launch', { method: 'POST', body: '{}' });
 
+    clearDraft();
     success('AI Autopilot started! We are generating your marketing foundation in the background.');
     navigate('dashboard');
   } catch (err) {
     error('Autopilot error: ' + err.message);
-    btn.textContent = 'Launch AI Autopilot';
+    btn.innerHTML = '<span class="btn-ai-icon">&#9733;</span> Launch AI Autopilot';
   } finally {
     btn.classList.remove('loading');
     btn.disabled = false;
   }
 }
 
+/* ================================================================== */
+/*  AUTO-RESEARCH                                                      */
+/* ================================================================== */
+
 async function autoResearchWebsite() {
   const website = $('obWebsite')?.value?.trim() || '';
   if (!website) {
     error('Add a website URL first.');
+    return;
+  }
+
+  // Basic URL validation
+  try {
+    new URL(website);
+  } catch {
+    error('Please enter a valid URL (e.g. https://example.com)');
     return;
   }
 
@@ -219,6 +332,7 @@ async function autoResearchWebsite() {
     applyChecklistValues('.goal-checkbox', profile.marketing_goals);
     applyChecklistValues('.platform-checkbox', profile.active_platforms);
 
+    saveDraft();
     success(`Website analyzed successfully${item?.provider ? ` via ${item.provider}` : ''}. Review and edit before launch.`);
   } catch (err) {
     error('Auto-research failed: ' + err.message);
