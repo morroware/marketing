@@ -256,14 +256,15 @@ export function init() {
     if (!form) return;
     const subject = form.querySelector('[name="subject"]')?.value;
     const bodyHtml = form.querySelector('[name="body_html"]')?.value;
-    if (!subject || !bodyHtml) {
+    const bodyText = form.querySelector('[name="body_text"]')?.value;
+    if (!subject || (!bodyHtml && !bodyText)) {
       error('Please fill in the subject and email body before sending a test.');
       return;
     }
     try {
       await api('/api/email-campaigns/test', {
         method: 'POST',
-        body: JSON.stringify({ to, subject, body_html: bodyHtml }),
+        body: JSON.stringify({ to, subject, body_html: bodyHtml || '', body_text: bodyText || '' }),
       });
       success(`Test email sent to ${to}`);
     } catch (err) {
