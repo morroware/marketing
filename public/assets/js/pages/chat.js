@@ -9,6 +9,30 @@ import { success, error } from '../core/toast.js';
 let currentConversationId = 0;
 let providerModels = {}; // Fetched from API, not hardcoded
 
+function renderMarkdown(text) {
+  if (!text) return '';
+  const sanitized = escapeHtml(String(text));
+  let html = sanitized
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/^[*-] (.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+
+  if (!html.startsWith('<')) html = '<p>' + html + '</p>';
+  return html;
+}
+
 function scrollChatToBottom() {
   const el = $('chatMessages');
   if (!el) return;
@@ -26,7 +50,11 @@ function appendMessage(role, content) {
 
   const div = document.createElement('div');
   div.className = `chat-msg chat-msg-${role}`;
-  div.innerHTML = `<div class="chat-bubble">${escapeHtml(content)}</div>`;
+  if (role === 'assistant') {
+    div.innerHTML = `<div class="chat-bubble chat-bubble-rich">${renderMarkdown(content)}</div>`;
+  } else {
+    div.innerHTML = `<div class="chat-bubble">${escapeHtml(content)}</div>`;
+  }
   el.appendChild(div);
   scrollChatToBottom();
 }
