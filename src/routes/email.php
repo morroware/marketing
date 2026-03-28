@@ -79,6 +79,33 @@ function register_email_routes(
         json_response(['item' => $emailCampaigns->create($p)], 201);
     });
 
+    // Send a one-off test message from the compose form without requiring a saved campaign.
+    $router->post('/api/email-campaigns/test', function () use ($emailService) {
+        if (!$emailService) { json_response(['error' => 'Email service not configured'], 500); return; }
+        $data = request_json();
+        $to = trim((string)($data['to'] ?? ''));
+        $subject = trim((string)($data['subject'] ?? ''));
+        $bodyHtml = (string)($data['body_html'] ?? '');
+        $bodyText = (string)($data['body_text'] ?? strip_tags($bodyHtml));
+
+        if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            json_response(['error' => 'Invalid email address'], 422);
+            return;
+        }
+        if ($subject === '') {
+            json_response(['error' => 'Missing: subject'], 422);
+            return;
+        }
+        if (trim($bodyHtml) === '' && trim($bodyText) === '') {
+            json_response(['error' => 'Missing email body'], 422);
+            return;
+        }
+
+        $fallbackHtml = nl2br(htmlspecialchars($bodyText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+        $ok = $emailService->sendTestEmail($to, $subject, $bodyHtml !== '' ? $bodyHtml : $fallbackHtml, $bodyText);
+        json_response(['success' => $ok]);
+    });
+
     $router->get('/api/email-campaigns/{id}', function ($p) use ($emailCampaigns) {
         $item = $emailCampaigns->find((int)$p['id']);
         $item ? json_response(['item' => $item]) : json_response(['error' => 'Not found'], 404);
