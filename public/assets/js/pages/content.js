@@ -3,7 +3,7 @@
  */
 
 import { api } from '../core/api.js';
-import { $, $$, escapeHtml, formatDateTime, onSubmit, formData, statusBadge, onClick, tableEmpty, emptyState, debounce, copyToClipboard, confirm } from '../core/utils.js';
+import { $, $$, escapeHtml, formatDateTime, onSubmit, formData, statusBadge, onClick, tableEmpty, emptyState, debounce, copyToClipboard, confirm, infoModal } from '../core/utils.js';
 import { success, error } from '../core/toast.js';
 
 let selectedIds = new Set();
@@ -397,7 +397,7 @@ export function init() {
       if (review) {
         const statusEmoji = review.status === 'approved' ? '✅' : review.status === 'needs_revision' ? '⚠️' : '❌';
         success(`Pre-Flight: ${statusEmoji} ${review.status} (Score: ${review.overall_score}/100)`);
-        if (review.summary) alert(`Pre-Flight Check: ${review.status}\nScore: ${review.overall_score}/100\n\n${review.summary}`);
+        if (review.summary) infoModal('Pre-Flight Check', `Status: ${review.status}\nScore: ${review.overall_score}/100\n\n${review.summary}`, { icon: statusEmoji });
       } else {
         success('Pre-flight check complete — see AI Studio for details');
       }
@@ -433,7 +433,7 @@ export function init() {
           '',
           'Tips: ' + (pred.optimization_tips || []).join('; '),
         ].filter(Boolean).join('\n');
-        alert(details);
+        infoModal('Performance Prediction', details, { icon: '&#128200;' });
       } else {
         success('Prediction complete');
       }

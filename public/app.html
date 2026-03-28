@@ -41,9 +41,9 @@
       <a href="#dashboard" data-page="dashboard"><span class="nav-icon">&#9632;</span> Dashboard</a>
 
       <div class="nav-section">
-        <button class="nav-section-toggle" data-section="ai-tools">
-          <span class="nav-section-icon">&#9733;</span> AI & Content
-          <span class="nav-chevron">&#9662;</span>
+        <button class="nav-section-toggle" data-section="ai-tools" aria-expanded="true" aria-controls="nav-ai-tools">
+          <span class="nav-section-icon" aria-hidden="true">&#9733;</span> AI & Content
+          <span class="nav-chevron" aria-hidden="true">&#9662;</span>
         </button>
         <div class="nav-section-items" id="nav-ai-tools">
           <a href="#ai" data-page="ai"><span class="nav-icon">&#9733;</span> AI Studio</a>
@@ -55,9 +55,9 @@
       </div>
 
       <div class="nav-section">
-        <button class="nav-section-toggle" data-section="marketing">
-          <span class="nav-section-icon">&#9776;</span> Marketing
-          <span class="nav-chevron">&#9662;</span>
+        <button class="nav-section-toggle" data-section="marketing" aria-expanded="true" aria-controls="nav-marketing">
+          <span class="nav-section-icon" aria-hidden="true">&#9776;</span> Marketing
+          <span class="nav-chevron" aria-hidden="true">&#9662;</span>
         </button>
         <div class="nav-section-items" id="nav-marketing">
           <a href="#campaigns" data-page="campaigns"><span class="nav-icon">&#9776;</span> Campaigns</a>
@@ -69,9 +69,9 @@
       </div>
 
       <div class="nav-section">
-        <button class="nav-section-toggle" data-section="intelligence">
-          <span class="nav-section-icon">&#9670;</span> Intelligence
-          <span class="nav-chevron">&#9662;</span>
+        <button class="nav-section-toggle" data-section="intelligence" aria-expanded="true" aria-controls="nav-intelligence">
+          <span class="nav-section-icon" aria-hidden="true">&#9670;</span> Intelligence
+          <span class="nav-chevron" aria-hidden="true">&#9662;</span>
         </button>
         <div class="nav-section-items" id="nav-intelligence">
           <a href="#analytics" data-page="analytics"><span class="nav-icon">&#9670;</span> Analytics</a>
@@ -82,9 +82,9 @@
       </div>
 
       <div class="nav-section">
-        <button class="nav-section-toggle" data-section="audience">
-          <span class="nav-section-icon">&#9823;</span> Audience
-          <span class="nav-chevron">&#9662;</span>
+        <button class="nav-section-toggle" data-section="audience" aria-expanded="true" aria-controls="nav-audience">
+          <span class="nav-section-icon" aria-hidden="true">&#9823;</span> Audience
+          <span class="nav-chevron" aria-hidden="true">&#9662;</span>
         </button>
         <div class="nav-section-items" id="nav-audience">
           <a href="#contacts" data-page="contacts"><span class="nav-icon">&#9823;</span> Contacts</a>
@@ -94,9 +94,9 @@
       </div>
 
       <div class="nav-section">
-        <button class="nav-section-toggle" data-section="tools">
-          <span class="nav-section-icon">&#9889;</span> Tools
-          <span class="nav-chevron">&#9662;</span>
+        <button class="nav-section-toggle" data-section="tools" aria-expanded="true" aria-controls="nav-tools">
+          <span class="nav-section-icon" aria-hidden="true">&#9889;</span> Tools
+          <span class="nav-chevron" aria-hidden="true">&#9662;</span>
         </button>
         <div class="nav-section-items" id="nav-tools">
           <a href="#links" data-page="links"><span class="nav-icon">&#128279;</span> Links & UTM</a>
@@ -130,7 +130,7 @@
     </header>
 
     <!-- Global AI Command Bar Modal -->
-    <div class="modal-overlay" id="aiCommandModal" role="dialog" aria-label="AI Command Bar">
+    <div class="modal-overlay" id="aiCommandModal" role="dialog" aria-modal="true" aria-label="AI Command Bar">
       <div class="modal-content ai-command-modal">
         <div class="ai-command-search">
           <span class="ai-command-icon">&#9733;</span>
@@ -492,7 +492,7 @@
           </div>
         </div>
         <div id="content-create" class="tab-panel">
-          <div style="display:grid; grid-template-columns:1fr 340px; gap:1rem; align-items:start;">
+          <div class="content-create-layout">
           <form id="postForm" class="stack card">
             <div class="row2">
               <div><label>Campaign</label><select name="campaign_id" id="campaignSelect"><option value="">None</option></select></div>
@@ -527,7 +527,7 @@
             <div class="flex">
               <label><input type="checkbox" name="is_evergreen" value="1" /> Evergreen content</label>
             </div>
-            <div class="btn-group" style="flex-wrap:wrap;">
+            <div class="btn-group flex-wrap">
               <button type="submit">Save Post</button>
               <button type="button" class="btn btn-ai" id="aiGenerateBody"><span class="btn-ai-icon">&#9733;</span> AI Write Content</button>
               <button type="button" class="btn btn-ai btn-sm" id="aiGenerateTitle" title="AI-generate post title"><span class="btn-ai-icon">&#9733;</span> AI Title</button>
@@ -1244,7 +1244,7 @@
         </div>
         <div id="email-templates-lib" class="tab-panel">
           <div class="card-grid" id="emailTemplateList"></div>
-          <div class="modal-overlay" id="emailTplModal" role="dialog" aria-labelledby="emailTplModalTitle">
+          <div class="modal-overlay" id="emailTplModal" role="dialog" aria-modal="true" aria-labelledby="emailTplModalTitle">
             <div class="modal-content"><div class="modal-header"><h3 id="emailTplModalTitle">Template Preview</h3><button class="modal-close" aria-label="Close" id="closeEmailTplModal">&times;</button></div><div class="modal-body" id="emailTplModalBody"></div></div>
           </div>
         </div>
@@ -1327,7 +1327,7 @@
         <div id="rssFeedList" class="mt-1"></div>
         <div class="card mt-1"><h3>Recent Items</h3><div class="table-wrap"><table class="data-table"><thead><tr><th>Title</th><th>Source</th><th>Date</th><th>Actions</th></tr></thead><tbody id="rssItemTable"></tbody></table></div></div>
         <!-- RSS to Post Modal -->
-        <div class="modal-overlay" id="rssPostModal" role="dialog" aria-label="AI: Turn into Post">
+        <div class="modal-overlay" id="rssPostModal" role="dialog" aria-modal="true" aria-label="AI: Turn into Post">
           <div class="modal-content"><div class="modal-header"><h3>AI: Turn into Post</h3><button class="modal-close" aria-label="Close" id="closeRssPostModal">&times;</button></div>
             <div class="modal-body stack">
               <select id="rssPostPlatform"><option>twitter</option><option>linkedin</option><option>instagram</option><option>facebook</option></select>
@@ -1366,7 +1366,7 @@
           <table class="data-table" aria-label="Contacts"><thead><tr><th>Email</th><th>Name</th><th>Company</th><th>Stage</th><th>Score</th><th>Source</th><th>Last Activity</th><th>Actions</th></tr></thead><tbody id="contactTable"><tr class="table-empty"><td colspan="8">No contacts yet. Add contacts manually or import a CSV file.</td></tr></tbody></table>
         </div>
         <!-- Contact detail modal -->
-        <div class="modal-overlay" id="contactModal" role="dialog" aria-labelledby="contactModalTitle">
+        <div class="modal-overlay" id="contactModal" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
           <div class="modal-content"><div class="modal-header"><h3 id="contactModalTitle">Contact</h3><button class="modal-close" aria-label="Close" id="closeContactModal">&times;</button></div><div class="modal-body" id="contactModalBody"></div></div>
         </div>
       </section>
@@ -1625,7 +1625,7 @@
         </form>
         <div class="card mt-1 hidden" id="smartSegmentsCard"><h3><span class="btn-ai-icon">&#9733;</span> AI Suggested Segments</h3><div id="smartSegmentsList"></div></div>
         <div id="segmentList" class="card-grid mt-1"></div>
-        <div class="modal-overlay" id="segmentModal" role="dialog" aria-labelledby="segmentModalTitle">
+        <div class="modal-overlay" id="segmentModal" role="dialog" aria-modal="true" aria-labelledby="segmentModalTitle">
           <div class="modal-content"><div class="modal-header"><h3 id="segmentModalTitle">Segment Contacts</h3><button class="modal-close" aria-label="Close" id="closeSegmentModal">&times;</button></div><div class="modal-body" id="segmentModalBody"></div></div>
         </div>
       </section>
@@ -1777,10 +1777,10 @@
       </div>
       <div class="ai-assist-diff" id="aiAssistantDiff"></div>
       <pre class="ai-output hidden" id="aiAssistantResult"></pre>
-      <div style="padding:0.5rem 0.75rem; border-top:1px solid var(--line); display:flex; gap:0.35rem;">
-        <button class="btn btn-sm btn-outline" id="aiAssistCopy" style="flex:1">Copy</button>
-        <button class="btn btn-sm btn-outline" id="aiAssistUndo" style="flex:1">Undo</button>
-        <button class="btn btn-sm btn-ai" id="aiAssistApply" style="flex:1">Apply</button>
+      <div class="ai-assist-action-bar">
+        <button class="btn btn-sm btn-outline" id="aiAssistCopy">Copy</button>
+        <button class="btn btn-sm btn-outline" id="aiAssistUndo">Undo</button>
+        <button class="btn btn-sm btn-ai" id="aiAssistApply">Apply</button>
       </div>
     </div>
     <div class="ai-assist-history" id="aiAssistHistory">
@@ -1797,7 +1797,7 @@
 </button>
 
 <!-- Confirmation Dialog -->
-<div class="modal-overlay" id="confirmDialog" role="dialog" aria-label="Confirm action">
+<div class="modal-overlay" id="confirmDialog" role="dialog" aria-modal="true" aria-label="Confirm action">
   <div class="modal-content confirm-dialog">
     <div class="modal-body">
       <div class="confirm-icon" id="confirmIcon">&#9888;</div>

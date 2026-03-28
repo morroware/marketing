@@ -1310,6 +1310,13 @@ label {
   border: none;
   border-radius: 0;
 }
+.ai-assist-action-bar {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 0.35rem;
+}
+.ai-assist-action-bar .btn { flex: 1; }
 
 /* ---- AI Floating Action Button ---- */
 .ai-fab {
@@ -1981,9 +1988,16 @@ body.light .ai-fab,
   flex-shrink: 0;
 }
 
+/* Content create side-by-side layout */
+.content-create-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1rem;
+  align-items: start;
+}
 @media (max-width: 1024px) {
-  #content-create > div[style] {
-    grid-template-columns: 1fr !important;
+  .content-create-layout {
+    grid-template-columns: 1fr;
   }
   .content-preview-panel {
     order: -1;
