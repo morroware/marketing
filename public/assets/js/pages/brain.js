@@ -8,6 +8,7 @@ import { $, $$, escapeHtml, formatDateTime } from '../core/utils.js';
 import { navigate } from '../core/router.js';
 
 let currentPipelineTemplate = null;
+let currentAgentTaskId = null;
 
 /* ================================================================== */
 /*  PAGE LIFECYCLE                                                     */
@@ -20,6 +21,28 @@ export function init() {
   $('#brainActivityFilter')?.addEventListener('change', loadActivity);
   $('#brainPipelineRunBtn')?.addEventListener('click', runPipeline);
   $('#brainPipelineClose')?.addEventListener('click', closePipelineRunner);
+
+  // Agents tab
+  $('#agentCreateBtn')?.addEventListener('click', () => createAgentTask(true));
+  $('#agentPlanOnlyBtn')?.addEventListener('click', () => createAgentTask(false));
+  $('#agentTaskClose')?.addEventListener('click', closeAgentWorkspace);
+  $('#agentExecuteNextBtn')?.addEventListener('click', executeNextAgentStep);
+  $('#agentExecuteAllBtn')?.addEventListener('click', executeAllAgentSteps);
+  $('#agentApproveBtn')?.addEventListener('click', approveAgentStep);
+  $('#agentRejectBtn')?.addEventListener('click', rejectAgentStep);
+  $('#agentCancelBtn')?.addEventListener('click', cancelAgentTask);
+
+  // Search tab
+  $('#searchExecuteBtn')?.addEventListener('click', executeSearch);
+  $('#searchSourceWebsite')?.addEventListener('change', (e) => {
+    $('#searchUrlField')?.classList.toggle('hidden', !e.target.checked);
+  });
+
+  // Models tab
+  $('#modelRoutingSaveBtn')?.addEventListener('click', saveModelRoute);
+  $('#modelRoutingDeleteBtn')?.addEventListener('click', deleteModelRoute);
+  $('#modelRoutingProvider')?.addEventListener('change', onProviderChange);
+  $('#modelRoutingTaskType')?.addEventListener('change', onTaskTypeChange);
 
   // Quick-start action buttons on overview
   document.querySelectorAll('[data-brain-action]').forEach(btn => {
@@ -48,6 +71,10 @@ export async function refresh() {
     loadPipelineTemplates(),
     loadPipelineHistory(),
     loadFeedback(),
+    loadAgentTypes(),
+    loadAgentHistory(),
+    loadSearchHistory(),
+    loadModelRouting(),
   ]);
 }
 
@@ -638,6 +665,685 @@ async function capturePerformance() {
       btn.classList.remove('loading');
       btn.disabled = false;
     }
+  }
+}
+
+/* ================================================================== */
+/*  AGENTS TAB                                                         */
+/* ================================================================== */
+
+async function loadAgentTypes() {
+  try {
+    const data = await api('/api/ai/agents/types');
+    const items = data.items || [];
+    const el = $('#agentTypesGrid');
+    if (!el) return;
+
+    if (items.length === 0) {
+      el.innerHTML = '<p class="text-muted text-small">Agent system not available.</p>';
+      return;
+    }
+
+    const iconMap = { search: '&#128269;', edit: '&#9998;', chart: '&#128202;', compass: '&#129517;', palette: '&#127912;' };
+
+    el.innerHTML = items.map(t => `
+      <div class="agent-type-card">
+        <div class="agent-type-icon">${iconMap[t.icon] || '&#129302;'}</div>
+        <div class="agent-type-info">
+          <strong>${escapeHtml(t.label)}</strong>
+          <p class="text-small text-muted mt-0">${escapeHtml(t.description)}</p>
+          <div class="flex flex-wrap gap-1 mt-1">
+            ${(t.capabilities || []).slice(0, 4).map(c => `<span class="badge text-small">${escapeHtml(c.replace(/_/g, ' '))}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    // Agent system may not be available
+  }
+}
+
+async function createAgentTask(execute) {
+  const goal = $('#agentGoalInput')?.value?.trim();
+  if (!goal) { error('Please enter a goal for the agent task.'); return; }
+
+  const context = $('#agentContextInput')?.value?.trim() || '';
+  const autoApprove = $('#agentAutoApprove')?.checked || false;
+  const btn = execute ? $('#agentCreateBtn') : $('#agentPlanOnlyBtn');
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const data = await api('/api/ai/agents/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ goal, context, auto_approve: autoApprove }),
+    });
+    const task = data.item || {};
+    currentAgentTaskId = task.id;
+    success(`Task planned with ${task.steps_total || 0} steps`);
+
+    // Clear inputs
+    if ($('#agentGoalInput')) $('#agentGoalInput').value = '';
+    if ($('#agentContextInput')) $('#agentContextInput').value = '';
+
+    // Show workspace
+    await openAgentWorkspace(task.id);
+
+    // Auto-execute if requested
+    if (execute) {
+      await executeAllAgentSteps();
+    }
+
+    loadAgentHistory();
+  } catch (e) {
+    error('Failed to create task: ' + e.message);
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+async function openAgentWorkspace(taskId) {
+  currentAgentTaskId = taskId;
+  const workspace = $('#agentTaskWorkspace');
+  if (!workspace) return;
+
+  try {
+    const data = await api(`/api/ai/agents/tasks/${taskId}`);
+    const task = data.item || {};
+
+    workspace.classList.remove('hidden');
+    $('#agentTaskTitle').textContent = `Task #${task.id}`;
+    $('#agentTaskGoal').textContent = task.goal || '';
+    $('#agentTaskStatus').textContent = task.status || 'planned';
+    $('#agentTaskStatus').className = 'badge ' + agentStatusClass(task.status);
+
+    renderAgentStepTimeline(task);
+    renderAgentStepOutput(task);
+    updateAgentActions(task);
+  } catch (e) {
+    error('Failed to load task: ' + e.message);
+  }
+}
+
+function renderAgentStepTimeline(task) {
+  const el = $('#agentStepTimeline');
+  if (!el) return;
+
+  const steps = task.plan || [];
+  const results = task.results || [];
+
+  el.innerHTML = steps.map((step, i) => {
+    const result = results[i];
+    let statusClass = 'step-pending';
+    let statusIcon = '&#9675;';
+    if (result) {
+      if (result.status === 'completed') { statusClass = 'step-complete'; statusIcon = '&#10003;'; }
+      else if (result.status === 'rejected') { statusClass = 'step-rejected'; statusIcon = '&#8634;'; }
+      else { statusClass = 'step-error'; statusIcon = '&#10007;'; }
+    } else if (i === (task.steps_completed || 0) && task.status === 'running') {
+      statusClass = 'step-active'; statusIcon = '&#9654;';
+    }
+
+    return `
+      <div class="agent-step ${statusClass}" data-step="${i}">
+        <div class="agent-step-marker">${statusIcon}</div>
+        <div class="agent-step-content">
+          <div class="agent-step-header">
+            <strong>Step ${step.step || i + 1}: ${escapeHtml(step.title || '')}</strong>
+            <span class="badge text-small">${escapeHtml(step.agent || '')}</span>
+          </div>
+          <p class="text-small text-muted mt-0">${escapeHtml((step.instruction || '').substring(0, 150))}</p>
+          ${result?.duration_ms ? `<span class="text-small text-muted">${(result.duration_ms / 1000).toFixed(1)}s</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Click on completed steps to view output
+  el.querySelectorAll('.agent-step.step-complete, .agent-step.step-rejected').forEach(stepEl => {
+    stepEl.style.cursor = 'pointer';
+    stepEl.addEventListener('click', () => {
+      const idx = parseInt(stepEl.dataset.step);
+      const result = results[idx];
+      if (result) showStepOutput(result);
+    });
+  });
+}
+
+function showStepOutput(result) {
+  const outputEl = $('#agentStepOutput');
+  const contentEl = $('#agentStepOutputContent');
+  if (!outputEl || !contentEl) return;
+
+  outputEl.classList.remove('hidden');
+  const output = typeof result.output === 'string' ? result.output : JSON.stringify(result.output, null, 2);
+  contentEl.innerHTML = `
+    <div class="flex-between mb-1">
+      <strong>${escapeHtml(result.title || 'Step ' + result.step)}</strong>
+      <span class="badge text-small">${escapeHtml(result.agent || '')}</span>
+    </div>
+    <div class="agent-output-text">${escapeHtml(output)}</div>
+    ${result.human_feedback ? `<div class="text-small text-muted mt-1">Feedback: ${escapeHtml(result.human_feedback)}</div>` : ''}
+    ${result.rejection_reason ? `<div class="text-small text-danger mt-1">Rejected: ${escapeHtml(result.rejection_reason)}</div>` : ''}
+  `;
+}
+
+function renderAgentStepOutput(task) {
+  const outputEl = $('#agentStepOutput');
+  const approvalEl = $('#agentApprovalActions');
+  if (!outputEl) return;
+
+  if (task.status === 'awaiting_approval' && task.current_step_output) {
+    outputEl.classList.remove('hidden');
+    $('#agentStepOutputContent').innerHTML = `<div class="agent-output-text">${escapeHtml(task.current_step_output)}</div>`;
+    approvalEl?.classList.remove('hidden');
+  } else if (task.status === 'completed' && task.results?.length) {
+    const last = task.results[task.results.length - 1];
+    showStepOutput(last);
+    approvalEl?.classList.add('hidden');
+  } else {
+    outputEl.classList.add('hidden');
+    approvalEl?.classList.add('hidden');
+  }
+}
+
+function updateAgentActions(task) {
+  const nextBtn = $('#agentExecuteNextBtn');
+  const allBtn = $('#agentExecuteAllBtn');
+  const cancelBtn = $('#agentCancelBtn');
+
+  const isFinished = task.status === 'completed' || task.status === 'cancelled';
+  const isAwaiting = task.status === 'awaiting_approval';
+
+  if (nextBtn) { nextBtn.disabled = isFinished; nextBtn.classList.toggle('hidden', isFinished || isAwaiting); }
+  if (allBtn) { allBtn.disabled = isFinished; allBtn.classList.toggle('hidden', isFinished || isAwaiting); }
+  if (cancelBtn) cancelBtn.classList.toggle('hidden', isFinished);
+}
+
+async function executeNextAgentStep() {
+  if (!currentAgentTaskId) return;
+  const btn = $('#agentExecuteNextBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    await api(`/api/ai/agents/tasks/${currentAgentTaskId}/execute`, { method: 'POST' });
+    await openAgentWorkspace(currentAgentTaskId);
+  } catch (e) {
+    error('Execution failed: ' + e.message);
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function executeAllAgentSteps() {
+  if (!currentAgentTaskId) return;
+  const btn = $('#agentExecuteAllBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    await api(`/api/ai/agents/tasks/${currentAgentTaskId}/execute-all`, { method: 'POST' });
+    success('All steps executed');
+    await openAgentWorkspace(currentAgentTaskId);
+    loadAgentHistory();
+  } catch (e) {
+    error('Execution failed: ' + e.message);
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function approveAgentStep() {
+  if (!currentAgentTaskId) return;
+  const feedback = $('#agentFeedbackInput')?.value?.trim() || '';
+  const btn = $('#agentApproveBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    await api(`/api/ai/agents/tasks/${currentAgentTaskId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ feedback }),
+    });
+    if ($('#agentFeedbackInput')) $('#agentFeedbackInput').value = '';
+    success('Step approved');
+    await openAgentWorkspace(currentAgentTaskId);
+  } catch (e) {
+    error('Approval failed: ' + e.message);
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function rejectAgentStep() {
+  if (!currentAgentTaskId) return;
+  const reason = $('#agentFeedbackInput')?.value?.trim() || '';
+  const btn = $('#agentRejectBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    await api(`/api/ai/agents/tasks/${currentAgentTaskId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+    if ($('#agentFeedbackInput')) $('#agentFeedbackInput').value = '';
+    success('Step rejected — revising');
+    await openAgentWorkspace(currentAgentTaskId);
+  } catch (e) {
+    error('Rejection failed: ' + e.message);
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function cancelAgentTask() {
+  if (!currentAgentTaskId) return;
+  try {
+    await api(`/api/ai/agents/tasks/${currentAgentTaskId}/cancel`, { method: 'POST' });
+    success('Task cancelled');
+    await openAgentWorkspace(currentAgentTaskId);
+    loadAgentHistory();
+  } catch (e) {
+    error(e.message);
+  }
+}
+
+function closeAgentWorkspace() {
+  $('#agentTaskWorkspace')?.classList.add('hidden');
+  $('#agentStepOutput')?.classList.add('hidden');
+  currentAgentTaskId = null;
+}
+
+async function loadAgentHistory() {
+  try {
+    const data = await api('/api/ai/agents/tasks?limit=15');
+    const items = data.items || [];
+    const el = $('#agentTaskHistory');
+    if (!el) return;
+
+    if (items.length === 0) {
+      el.innerHTML = '<p class="text-muted text-small">No agent tasks yet. Describe a goal above to get started.</p>';
+      return;
+    }
+
+    el.innerHTML = items.map(t => `
+      <div class="brain-history-item" data-agent-task-id="${t.id}" style="cursor:pointer">
+        <span class="brain-history-status ${agentStatusClass(t.status)}">${agentStatusIcon(t.status)}</span>
+        <div style="flex:1;min-width:0">
+          <strong class="text-small" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.goal)}</strong>
+        </div>
+        <span class="text-small text-muted">${t.steps_completed || 0}/${t.steps_total || 0}</span>
+        <span class="badge text-small ${agentStatusClass(t.status)}">${t.status}</span>
+        <span class="text-small text-muted">${formatDateTime(t.created_at)}</span>
+      </div>
+    `).join('');
+
+    el.querySelectorAll('[data-agent-task-id]').forEach(row => {
+      row.addEventListener('click', () => openAgentWorkspace(parseInt(row.dataset.agentTaskId)));
+    });
+  } catch (e) {
+    // Silently fail
+  }
+}
+
+function agentStatusClass(status) {
+  const map = { completed: 'status-success', running: 'status-warning', planned: 'status-info', awaiting_approval: 'status-warning', cancelled: 'status-error', failed: 'status-error' };
+  return map[status] || '';
+}
+
+function agentStatusIcon(status) {
+  const map = { completed: '&#10003;', running: '&#9654;', planned: '&#9679;', awaiting_approval: '&#9888;', cancelled: '&#10007;', failed: '&#10007;' };
+  return map[status] || '&#9679;';
+}
+
+/* ================================================================== */
+/*  SEARCH TAB                                                         */
+/* ================================================================== */
+
+async function executeSearch() {
+  const query = $('#searchQueryInput')?.value?.trim();
+  if (!query) { error('Please enter a search query.'); return; }
+
+  const sources = [];
+  if ($('#searchSourceInternal')?.checked) sources.push('internal');
+  if ($('#searchSourceWeb')?.checked) sources.push('web');
+  if ($('#searchSourceWebsite')?.checked) sources.push('website');
+
+  if (sources.length === 0) { error('Select at least one search source.'); return; }
+
+  const url = $('#searchUrlInput')?.value?.trim() || '';
+  if (sources.includes('website') && !url) { error('Enter a URL for website analysis.'); return; }
+
+  const btn = $('#searchExecuteBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    const data = await api('/api/ai/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, sources, url }),
+    });
+    const result = data.item || {};
+
+    const resultsEl = $('#searchResults');
+    if (resultsEl) resultsEl.classList.remove('hidden');
+
+    // Count
+    const countEl = $('#searchResultsCount');
+    if (countEl) countEl.textContent = `${result.total_results || 0} result${(result.total_results || 0) !== 1 ? 's' : ''} from ${sources.join(', ')}`;
+
+    // Synthesis
+    const synthEl = $('#searchSynthesis');
+    if (synthEl) {
+      synthEl.innerHTML = result.summary
+        ? `<div class="search-synthesis-text">${escapeHtml(result.summary)}</div>`
+        : '<p class="text-muted">No synthesis available.</p>';
+    }
+
+    // Internal results
+    const internalEl = $('#searchInternalResults');
+    const internalList = $('#searchInternalList');
+    if (internalEl && internalList) {
+      const internalData = result.sources?.internal?.results || [];
+      if (internalData.length > 0) {
+        internalEl.classList.remove('hidden');
+        internalList.innerHTML = internalData.map(r => {
+          const d = r.data || {};
+          const title = d.title || d.name || d.subject || d.memory_key || d.insight || d.email || 'Untitled';
+          return `
+            <div class="brain-history-item">
+              <span class="badge text-small">${escapeHtml(r.type)}</span>
+              <strong style="flex:1">${escapeHtml(typeof title === 'string' ? title.substring(0, 120) : '')}</strong>
+              ${d.status ? `<span class="text-small text-muted">${escapeHtml(d.status)}</span>` : ''}
+            </div>
+          `;
+        }).join('');
+      } else {
+        internalEl.classList.add('hidden');
+      }
+    }
+
+    // Web results
+    const webEl = $('#searchWebResults');
+    const webContent = $('#searchWebContent');
+    if (webEl && webContent) {
+      const webData = result.sources?.web;
+      if (webData?.research) {
+        webEl.classList.remove('hidden');
+        webContent.innerHTML = `<div class="search-web-text">${escapeHtml(webData.research)}</div>`;
+      } else {
+        webEl.classList.add('hidden');
+      }
+    }
+
+    // Website results
+    const siteEl = $('#searchWebsiteResults');
+    const siteContent = $('#searchWebsiteContent');
+    if (siteEl && siteContent) {
+      const siteData = result.sources?.website;
+      if (siteData?.analysis) {
+        siteEl.classList.remove('hidden');
+        siteContent.innerHTML = `
+          <div class="flex-between mb-1">
+            <strong>${escapeHtml(siteData.title || siteData.url || '')}</strong>
+            <span class="text-small text-muted">${siteData.word_count || 0} words</span>
+          </div>
+          ${siteData.description ? `<p class="text-small text-muted">${escapeHtml(siteData.description)}</p>` : ''}
+          <div class="search-website-text">${escapeHtml(siteData.analysis)}</div>
+        `;
+      } else if (siteData?.error) {
+        siteEl.classList.remove('hidden');
+        siteContent.innerHTML = `<p class="text-danger">${escapeHtml(siteData.error)}</p>`;
+      } else {
+        siteEl.classList.add('hidden');
+      }
+    }
+
+    success('Search complete');
+    loadSearchHistory();
+  } catch (e) {
+    error('Search failed: ' + e.message);
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function loadSearchHistory() {
+  try {
+    const data = await api('/api/ai/search/history?limit=15');
+    const items = data.items || [];
+    const el = $('#searchHistory');
+    if (!el) return;
+
+    if (items.length === 0) {
+      el.innerHTML = '<p class="text-muted text-small">No searches yet. Try a search above.</p>';
+      return;
+    }
+
+    el.innerHTML = items.map(s => `
+      <div class="brain-history-item" style="cursor:pointer" data-search-query="${escapeHtml(s.query)}">
+        <span class="brain-history-status status-info">&#128269;</span>
+        <div style="flex:1;min-width:0">
+          <strong class="text-small" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(s.query)}</strong>
+          ${s.summary ? `<span class="text-small text-muted">${escapeHtml(s.summary.substring(0, 100))}</span>` : ''}
+        </div>
+        <span class="badge text-small">${escapeHtml(s.sources || 'internal')}</span>
+        <span class="text-small text-muted">${s.results_count || 0} results</span>
+        <span class="text-small text-muted">${formatDateTime(s.created_at)}</span>
+      </div>
+    `).join('');
+
+    // Click to re-run search
+    el.querySelectorAll('[data-search-query]').forEach(row => {
+      row.addEventListener('click', () => {
+        const input = $('#searchQueryInput');
+        if (input) { input.value = row.dataset.searchQuery; }
+      });
+    });
+  } catch (e) {
+    // Silently fail
+  }
+}
+
+/* ================================================================== */
+/*  MODELS TAB                                                         */
+/* ================================================================== */
+
+let modelRoutingData = null;
+
+async function loadModelRouting() {
+  try {
+    const data = await api('/api/ai/model-routing');
+    modelRoutingData = data.item || {};
+
+    renderModelRoutingGrid();
+    populateTaskTypeSelect();
+    populateProviderSelect();
+  } catch (e) {
+    // Silently fail
+  }
+}
+
+function renderModelRoutingGrid() {
+  const el = $('#modelRoutingGrid');
+  if (!el || !modelRoutingData) return;
+
+  const routing = modelRoutingData.routing || [];
+  const taskTypes = modelRoutingData.task_types || {};
+
+  if (routing.length === 0) {
+    el.innerHTML = `
+      <div class="brain-empty-state">
+        <div class="brain-empty-icon">&#9881;</div>
+        <p>No custom model routes configured. All tasks use your default provider.</p>
+        <p class="text-small text-muted">Use the form below to assign specific providers to different task types.</p>
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = routing.map(r => `
+    <div class="model-route-card" data-route-type="${escapeHtml(r.task_type)}">
+      <div class="flex-between">
+        <div>
+          <strong>${capitalize(r.task_type)}</strong>
+          <p class="text-small text-muted mt-0">${escapeHtml(taskTypes[r.task_type] || '')}</p>
+        </div>
+        <button class="btn btn-ghost btn-sm text-danger" data-delete-route="${escapeHtml(r.task_type)}" title="Reset to default" aria-label="Reset route">&#10005;</button>
+      </div>
+      <div class="flex gap-1 mt-1">
+        <span class="badge">${escapeHtml(r.provider)}</span>
+        ${r.model ? `<span class="badge text-small">${escapeHtml(r.model)}</span>` : ''}
+      </div>
+      ${r.updated_at ? `<div class="text-small text-muted mt-1">${formatDateTime(r.updated_at)}</div>` : ''}
+    </div>
+  `).join('');
+
+  // Wire delete buttons
+  el.querySelectorAll('[data-delete-route]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const taskType = btn.dataset.deleteRoute;
+      try {
+        await api(`/api/ai/model-routing/${taskType}`, { method: 'DELETE' });
+        success(`Route for "${taskType}" reset to default`);
+        loadModelRouting();
+      } catch (err) { error(err.message); }
+    });
+  });
+
+  // Click card to edit
+  el.querySelectorAll('[data-route-type]').forEach(card => {
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => {
+      const type = card.dataset.routeType;
+      const route = routing.find(r => r.task_type === type);
+      if (route) {
+        const typeSelect = $('#modelRoutingTaskType');
+        const providerSelect = $('#modelRoutingProvider');
+        if (typeSelect) typeSelect.value = type;
+        if (providerSelect) {
+          providerSelect.value = route.provider;
+          onProviderChange();
+          // Set model after provider options populate
+          setTimeout(() => {
+            const modelSelect = $('#modelRoutingModel');
+            if (modelSelect) modelSelect.value = route.model || '';
+          }, 50);
+        }
+      }
+    });
+  });
+}
+
+function populateTaskTypeSelect() {
+  const select = $('#modelRoutingTaskType');
+  if (!select || !modelRoutingData) return;
+
+  const taskTypes = modelRoutingData.task_types || {};
+  const current = select.value;
+
+  // Keep the first placeholder option, replace the rest
+  select.innerHTML = '<option value="">Select task type...</option>' +
+    Object.entries(taskTypes).map(([key, desc]) =>
+      `<option value="${escapeHtml(key)}">${capitalize(key)} — ${escapeHtml(desc)}</option>`
+    ).join('');
+
+  if (current) select.value = current;
+}
+
+function populateProviderSelect() {
+  const select = $('#modelRoutingProvider');
+  if (!select || !modelRoutingData) return;
+
+  const providers = modelRoutingData.providers || {};
+  const current = select.value;
+
+  select.innerHTML = '<option value="">Default provider</option>' +
+    Object.entries(providers)
+      .filter(([, info]) => info.configured)
+      .map(([key, info]) =>
+        `<option value="${escapeHtml(key)}">${capitalize(key)}${info.model ? ` (${escapeHtml(info.model)})` : ''}</option>`
+      ).join('');
+
+  if (current) select.value = current;
+}
+
+function onProviderChange() {
+  const providerSelect = $('#modelRoutingProvider');
+  const modelSelect = $('#modelRoutingModel');
+  if (!providerSelect || !modelSelect || !modelRoutingData) return;
+
+  const provider = providerSelect.value;
+  const providers = modelRoutingData.providers || {};
+  const info = providers[provider];
+
+  modelSelect.innerHTML = '<option value="">Default model</option>';
+
+  if (info?.models?.length) {
+    const labels = info.labels || {};
+    info.models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = labels[m] || m;
+      modelSelect.appendChild(opt);
+    });
+  }
+}
+
+function onTaskTypeChange() {
+  // Pre-select existing route values if editing
+  const taskType = $('#modelRoutingTaskType')?.value;
+  if (!taskType || !modelRoutingData) return;
+
+  const existing = (modelRoutingData.routing || []).find(r => r.task_type === taskType);
+  if (existing) {
+    const providerSelect = $('#modelRoutingProvider');
+    if (providerSelect) {
+      providerSelect.value = existing.provider;
+      onProviderChange();
+      setTimeout(() => {
+        const modelSelect = $('#modelRoutingModel');
+        if (modelSelect) modelSelect.value = existing.model || '';
+      }, 50);
+    }
+  }
+}
+
+async function saveModelRoute() {
+  const taskType = $('#modelRoutingTaskType')?.value;
+  const provider = $('#modelRoutingProvider')?.value;
+  const model = $('#modelRoutingModel')?.value || '';
+
+  if (!taskType) { error('Select a task type.'); return; }
+  if (!provider) { error('Select a provider.'); return; }
+
+  const btn = $('#modelRoutingSaveBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    await api('/api/ai/model-routing', {
+      method: 'POST',
+      body: JSON.stringify({ task_type: taskType, provider, model }),
+    });
+    success(`Model route saved for "${taskType}"`);
+    await loadModelRouting();
+  } catch (e) {
+    error('Failed to save route: ' + e.message);
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function deleteModelRoute() {
+  const taskType = $('#modelRoutingTaskType')?.value;
+  if (!taskType) { error('Select a task type to reset.'); return; }
+
+  try {
+    await api(`/api/ai/model-routing/${taskType}`, { method: 'DELETE' });
+    success(`Route for "${taskType}" reset to default`);
+    await loadModelRouting();
+  } catch (e) {
+    error(e.message);
   }
 }
 
