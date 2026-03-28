@@ -38,20 +38,23 @@ export async function refresh() {
         }).join('')
       : emptyState('&#9776;', 'No campaigns yet', 'Create your first campaign to start tracking ROI.');
 
-    list.querySelectorAll('[data-delete]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    // Use onclick assignment to prevent listener accumulation on refresh
+    list.onclick = async (e) => {
+      const deleteBtn = e.target.closest('[data-delete]');
+      if (deleteBtn) {
         if (!await confirm('Delete campaign?', 'This campaign and its metrics will be permanently removed.')) return;
         try {
-          await api(`/api/campaigns/${btn.dataset.delete}`, { method: 'DELETE' });
+          await api(`/api/campaigns/${deleteBtn.dataset.delete}`, { method: 'DELETE' });
           success('Campaign deleted');
           refresh();
         } catch (err) { error(err.message); }
-      });
-    });
-
-    list.querySelectorAll('[data-metrics]').forEach((btn) => {
-      btn.addEventListener('click', () => toggleMetrics(parseInt(btn.dataset.metrics)));
-    });
+        return;
+      }
+      const metricsBtn = e.target.closest('[data-metrics]');
+      if (metricsBtn) {
+        toggleMetrics(parseInt(metricsBtn.dataset.metrics));
+      }
+    };
   } catch (err) {
     error('Failed to load campaigns: ' + err.message);
   }

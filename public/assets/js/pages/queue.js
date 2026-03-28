@@ -35,19 +35,19 @@ async function loadQueue() {
       </td>
     </tr>`).join('') : tableEmpty(6, 'Queue is empty');
 
-    table.querySelectorAll('[data-remove]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        if (!await confirm('Remove from Queue', 'Are you sure you want to remove this post from the queue?', { okText: 'Remove', okClass: 'btn-danger' })) return;
-        btn.classList.add('loading');
-        btn.disabled = true;
-        try {
-          await api(`/api/social-queue/${btn.dataset.remove}`, { method: 'DELETE' });
-          success('Removed from queue');
-          loadQueue();
-        } catch (e) { error(e.message); }
-        finally { btn.classList.remove('loading'); btn.disabled = false; }
-      });
-    });
+    table.onclick = async (e) => {
+      const btn = e.target.closest('[data-remove]');
+      if (!btn) return;
+      if (!await confirm('Remove from Queue', 'Are you sure you want to remove this post from the queue?', { okText: 'Remove', okClass: 'btn-danger' })) return;
+      btn.classList.add('loading');
+      btn.disabled = true;
+      try {
+        await api(`/api/social-queue/${btn.dataset.remove}`, { method: 'DELETE' });
+        success('Removed from queue');
+        loadQueue();
+      } catch (e) { error(e.message); }
+      finally { btn.classList.remove('loading'); btn.disabled = false; }
+    };
   } catch (e) {
     error('Failed to load queue: ' + e.message);
   }

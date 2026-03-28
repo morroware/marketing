@@ -75,7 +75,7 @@ final class AiOrchestrator
         'blog-post'           => ['endpoint' => '/api/ai/blog-post', 'category' => 'content', 'output_field' => 'post'],
         'video-script'        => ['endpoint' => '/api/ai/video-script', 'category' => 'content', 'output_field' => 'script'],
         'caption-batch'       => ['endpoint' => '/api/ai/caption-batch', 'category' => 'content', 'output_field' => 'captions'],
-        'repurpose'           => ['endpoint' => '/api/ai/repurpose', 'category' => 'content', 'output_field' => 'repurposed'],
+        'repurpose'           => ['endpoint' => '/api/ai/repurpose', 'category' => 'content', 'output_field' => 'results'],
         'ad-variations'       => ['endpoint' => '/api/ai/ad-variations', 'category' => 'content', 'output_field' => 'variations'],
         'subject-lines'       => ['endpoint' => '/api/ai/subject-lines', 'category' => 'content', 'output_field' => 'subjects'],
         'refine'              => ['endpoint' => '/api/ai/refine', 'category' => 'content', 'output_field' => 'content'],
@@ -89,7 +89,7 @@ final class AiOrchestrator
         'social-strategy'     => ['endpoint' => '/api/ai/social-strategy', 'category' => 'strategy', 'output_field' => 'strategy'],
         'calendar'            => ['endpoint' => '/api/ai/calendar', 'category' => 'strategy', 'output_field' => 'calendar'],
         'calendar-month'      => ['endpoint' => '/api/ai/calendar-month', 'category' => 'strategy', 'output_field' => 'calendar'],
-        'smart-times'         => ['endpoint' => '/api/ai/smart-times', 'category' => 'strategy', 'output_field' => 'times'],
+        'smart-times'         => ['endpoint' => '/api/ai/smart-times', 'category' => 'strategy', 'output_field' => 'schedule'],
         'campaign-optimizer'  => ['endpoint' => '/api/ai/campaign-optimizer', 'category' => 'strategy', 'output_field' => 'optimization'],
         'score'               => ['endpoint' => '/api/ai/score', 'category' => 'analysis', 'output_field' => 'score'],
         'tone-analysis'       => ['endpoint' => '/api/ai/tone-analysis', 'category' => 'analysis', 'output_field' => 'analysis'],
@@ -400,6 +400,8 @@ final class AiOrchestrator
             'preflight'           => $this->analysisTools->preFlightCheck($input['content'] ?? '', $input['platform'] ?? 'general'),
             'predict'             => $this->analysisTools->predictPerformance($input['content'] ?? '', $input['platform'] ?? 'instagram'),
             'competitor-radar'    => $this->strategyTools->competitorRadar($input['competitors'] ?? []),
+            'ad-variations'       => $this->contentTools->adVariations($input['base_ad'] ?? '', (int)($input['count'] ?? 5)),
+            'subject-lines'       => $this->contentTools->emailSubjectLines($input['topic'] ?? '', (int)($input['count'] ?? 10)),
             default               => ['error' => "Unknown tool: {$toolName}"],
         };
     }

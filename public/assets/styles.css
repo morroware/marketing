@@ -1935,6 +1935,14 @@ body.light .ai-fab,
   opacity: 0.5;
   z-index: 10;
 }
+.workflow-block.drop-above {
+  border-top: 3px solid var(--accent);
+  margin-top: -2px;
+}
+.workflow-block.drop-below {
+  border-bottom: 3px solid var(--accent);
+  margin-bottom: -2px;
+}
 .workflow-block-header {
   display: flex;
   align-items: center;

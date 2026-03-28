@@ -131,7 +131,7 @@ async function refreshSettingsInfo() {
 
       const form = document.getElementById('settingsForm');
       if (form) {
-        form.addEventListener('submit', async (e) => {
+        form.onsubmit = async (e) => {
           e.preventDefault();
           const btn = form.querySelector('button[type="submit"]');
           if (!btn) return;
@@ -158,7 +158,7 @@ async function refreshSettingsInfo() {
             btn.disabled = false;
             btn.classList.remove('loading');
           }
-        });
+        };
       }
     }
   } catch (err) {

@@ -97,17 +97,17 @@ function toggleSectionPicker() {
     </button>
   `).join('');
 
-  picker.querySelectorAll('[data-add-section]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.addSection);
-      const template = sectionTemplates[idx];
-      if (template) {
-        pageSections.push(JSON.parse(JSON.stringify(template.default)));
-        renderSections();
-        picker.classList.add('hidden');
-      }
-    });
-  });
+  picker.onclick = (e) => {
+    const btn = e.target.closest('[data-add-section]');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.addSection);
+    const template = sectionTemplates[idx];
+    if (template) {
+      pageSections.push(JSON.parse(JSON.stringify(template.default)));
+      renderSections();
+      picker.classList.add('hidden');
+    }
+  };
 
   picker.classList.remove('hidden');
   picker.style.display = 'grid';
@@ -257,7 +257,7 @@ async function loadPages() {
       </div>`;
     }).join('') || emptyState('&#128196;', 'No landing pages yet', 'Create your first landing page to capture leads and drive conversions.');
 
-    el.addEventListener('click', handlePageListClick);
+    el.onclick = handlePageListClick;
   } catch (err) {
     toast('Failed to load landing pages: ' + err.message, 'error');
   }

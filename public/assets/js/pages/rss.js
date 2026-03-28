@@ -29,26 +29,26 @@ async function refreshFeeds() {
         </div>`).join('')
       : emptyState('&#128225;', 'No RSS Feeds', 'Add RSS feeds to monitor industry news and generate content.');
 
-    list.querySelectorAll('[data-fetch]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    list.onclick = async (e) => {
+      const fetchBtn = e.target.closest('[data-fetch]');
+      if (fetchBtn) {
         try {
-          const result = await api(`/api/rss-feeds/${btn.dataset.fetch}/fetch`, { method: 'POST' });
+          const result = await api(`/api/rss-feeds/${fetchBtn.dataset.fetch}/fetch`, { method: 'POST' });
           success(`Fetched ${result.new_items ?? 0} new items`);
           refreshItems();
         } catch (err) { error(err.message); }
-      });
-    });
-
-    list.querySelectorAll('[data-delete-feed]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+        return;
+      }
+      const deleteBtn = e.target.closest('[data-delete-feed]');
+      if (deleteBtn) {
         if (!await confirm('Delete Feed', 'Are you sure you want to delete this RSS feed?')) return;
         try {
-          await api(`/api/rss-feeds/${btn.dataset.deleteFeed}`, { method: 'DELETE' });
+          await api(`/api/rss-feeds/${deleteBtn.dataset.deleteFeed}`, { method: 'DELETE' });
           success('Feed deleted');
           refresh();
         } catch (err) { error(err.message); }
-      });
-    });
+      }
+    };
   } catch (err) {
     error('Failed to load feeds: ' + err.message);
   }
@@ -69,32 +69,32 @@ async function refreshItems() {
         </tr>`).join('')
       : tableEmpty(4, 'No RSS items yet');
 
-    // Wire AI Post buttons
-    table.querySelectorAll('[data-rss-post]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const title = btn.dataset.rssTitle || '';
-        const summary = btn.dataset.rssSummary || '';
-        const url = btn.dataset.rssUrl || '';
-        const platform = $('rssPostPlatform')?.value || 'twitter';
+    // Wire AI Post buttons via event delegation
+    table.onclick = async (e) => {
+      const btn = e.target.closest('[data-rss-post]');
+      if (!btn) return;
+      const title = btn.dataset.rssTitle || '';
+      const summary = btn.dataset.rssSummary || '';
+      const url = btn.dataset.rssUrl || '';
+      const platform = $('rssPostPlatform')?.value || 'twitter';
 
-        btn.classList.add('loading'); btn.disabled = true;
-        try {
-          const { item } = await api('/api/ai/rss-to-post', {
-            method: 'POST',
-            body: JSON.stringify({ title, summary, url, platform }),
-          });
-          lastRssPost = item?.post || '';
-          const modal = $('rssPostModal');
-          const output = $('rssPostOutput');
-          if (modal && output) {
-            output.textContent = lastRssPost;
-            modal.classList.add('visible');
-          }
-          success('Post generated from RSS item');
-        } catch (err) { error(err.message); }
-        finally { btn.classList.remove('loading'); btn.disabled = false; }
-      });
-    });
+      btn.classList.add('loading'); btn.disabled = true;
+      try {
+        const { item } = await api('/api/ai/rss-to-post', {
+          method: 'POST',
+          body: JSON.stringify({ title, summary, url, platform }),
+        });
+        lastRssPost = item?.post || '';
+        const modal = $('rssPostModal');
+        const output = $('rssPostOutput');
+        if (modal && output) {
+          output.textContent = lastRssPost;
+          modal.classList.add('visible');
+        }
+        success('Post generated from RSS item');
+      } catch (err) { error(err.message); }
+      finally { btn.classList.remove('loading'); btn.disabled = false; }
+    };
   } catch (err) {
     error('Failed to load RSS items: ' + err.message);
   }
