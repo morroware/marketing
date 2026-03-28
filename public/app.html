@@ -175,27 +175,35 @@
       <section id="page-onboarding" class="page">
         <div class="onboard-container">
           <div class="onboard-header">
+            <div class="onboard-logo-anim">&#129504;</div>
             <h2>Welcome to Your AI Marketing Suite</h2>
-            <p class="text-muted">Tell us about your business and we'll build your entire marketing foundation with AI.</p>
+            <p class="text-muted">Tell us about your business and we'll build your entire marketing foundation with AI. This takes about 2 minutes.</p>
             <div class="onboard-progress">
               <div class="onboard-progress-bar"><div class="onboard-progress-fill" id="onboardProgressFill" style="width:20%"></div></div>
               <div class="onboard-steps-indicators">
-                <span class="onboard-step-indicator active" data-step="1">1. Business</span>
-                <span class="onboard-step-indicator" data-step="2">2. Audience</span>
-                <span class="onboard-step-indicator" data-step="3">3. Competition</span>
-                <span class="onboard-step-indicator" data-step="4">4. Goals</span>
-                <span class="onboard-step-indicator" data-step="5">5. Voice</span>
+                <span class="onboard-step-indicator active" data-step="1"><span class="onboard-step-num">1</span> Business</span>
+                <span class="onboard-step-indicator" data-step="2"><span class="onboard-step-num">2</span> Audience</span>
+                <span class="onboard-step-indicator" data-step="3"><span class="onboard-step-num">3</span> Competition</span>
+                <span class="onboard-step-indicator" data-step="4"><span class="onboard-step-num">4</span> Goals</span>
+                <span class="onboard-step-indicator" data-step="5"><span class="onboard-step-num">5</span> Launch</span>
               </div>
             </div>
           </div>
 
           <!-- Step 1: Your Business -->
           <div class="onboard-step card" id="onboardStep1">
-            <h3>Tell us about your business</h3>
+            <div class="onboard-step-header">
+              <span class="onboard-step-icon">&#127970;</span>
+              <div>
+                <h3>Tell us about your business</h3>
+                <p class="text-muted text-small">This is the foundation for all AI-generated content. The more detail you provide, the better your results.</p>
+              </div>
+            </div>
             <div class="stack">
               <div>
                 <label>What does your business do? <span class="text-danger">*</span></label>
                 <textarea id="obBusinessDesc" class="input" rows="3" placeholder="e.g. We sell organic skincare products for women aged 25-45 who care about sustainability..."></textarea>
+                <div class="field-hint" id="obBusinessDescHint">Minimum 10 characters. Be specific about what you do and who you serve.</div>
               </div>
               <div>
                 <label>Products or Services</label>
@@ -205,36 +213,48 @@
                 <div><label>Website URL</label><input id="obWebsite" class="input" type="url" placeholder="https://yourbusiness.com"></div>
                 <div><label>What makes you different? (USPs)</label><input id="obUSPs" class="input" placeholder="e.g. 100% organic, cruelty-free, female-founded"></div>
               </div>
-              <div class="flex gap-1" style="align-items:center;">
-                <button type="button" class="btn btn-sm btn-outline" id="obAutoResearch"><span class="btn-ai-icon">&#9733;</span> Auto-Research from Website</button>
-                <span class="text-small text-muted">Uses your website content to draft your business profile, audience, goals, and competitor angles.</span>
+              <div class="onboard-autoresearch">
+                <button type="button" class="btn btn-sm btn-ai" id="obAutoResearch"><span class="btn-ai-icon">&#9733;</span> Auto-Research from Website</button>
+                <span class="text-small text-muted">AI will analyze your website and fill in your profile automatically.</span>
               </div>
               <div class="flex-between mt-1">
                 <button type="button" class="btn btn-ghost" id="skipOnboarding">Skip for now</button>
-                <button type="button" class="btn btn-ai onboard-next"><span class="btn-ai-icon">&#9733;</span> Next: Your Audience</button>
+                <button type="button" class="btn btn-ai onboard-next"><span class="btn-ai-icon">&#9733;</span> Next: Your Audience &#8594;</button>
               </div>
             </div>
           </div>
 
           <!-- Step 2: Your Audience -->
           <div class="onboard-step card" id="onboardStep2" style="display:none">
-            <h3>Who is your target audience?</h3>
+            <div class="onboard-step-header">
+              <span class="onboard-step-icon">&#9823;</span>
+              <div>
+                <h3>Who is your target audience?</h3>
+                <p class="text-muted text-small">Understanding your ideal customer helps AI create content that resonates.</p>
+              </div>
+            </div>
             <div class="stack">
               <div>
                 <label>Describe your ideal customer</label>
                 <textarea id="obAudience" class="input" rows="3" placeholder="e.g. Health-conscious women aged 25-45, urban professionals, interested in natural beauty, active on Instagram and Pinterest..."></textarea>
+                <div class="field-hint">Think about demographics, interests, pain points, and where they spend time online.</div>
               </div>
               <div class="flex-between mt-1">
-                <button type="button" class="btn btn-ghost onboard-prev">&larr; Back</button>
-                <button type="button" class="btn btn-ai onboard-next"><span class="btn-ai-icon">&#9733;</span> Next: Competition</button>
+                <button type="button" class="btn btn-ghost onboard-prev">&#8592; Back</button>
+                <button type="button" class="btn btn-ai onboard-next"><span class="btn-ai-icon">&#9733;</span> Next: Competition &#8594;</button>
               </div>
             </div>
           </div>
 
           <!-- Step 3: Competition -->
           <div class="onboard-step card" id="onboardStep3" style="display:none">
-            <h3>Who are your competitors?</h3>
-            <p class="text-muted text-small">Add up to 5 competitors. We'll analyze them to find your advantages.</p>
+            <div class="onboard-step-header">
+              <span class="onboard-step-icon">&#9878;</span>
+              <div>
+                <h3>Who are your competitors?</h3>
+                <p class="text-muted text-small">AI will analyze them to find your competitive advantages. Add up to 5.</p>
+              </div>
+            </div>
             <div class="stack">
               <div id="competitorFields">
                 <div class="flex gap-1 mb-1"><input type="text" class="input competitor-input" placeholder="Competitor name or URL"></div>
@@ -242,46 +262,57 @@
               </div>
               <button type="button" class="btn btn-sm btn-outline" id="addCompetitorField">+ Add Competitor</button>
               <div class="flex-between mt-1">
-                <button type="button" class="btn btn-ghost onboard-prev">&larr; Back</button>
-                <button type="button" class="btn btn-ai onboard-next"><span class="btn-ai-icon">&#9733;</span> Next: Goals &amp; Channels</button>
+                <button type="button" class="btn btn-ghost onboard-prev">&#8592; Back</button>
+                <button type="button" class="btn btn-ai onboard-next"><span class="btn-ai-icon">&#9733;</span> Next: Goals &#8594;</button>
               </div>
             </div>
           </div>
 
           <!-- Step 4: Goals & Channels -->
           <div class="onboard-step card" id="onboardStep4" style="display:none">
-            <h3>What are your marketing goals?</h3>
+            <div class="onboard-step-header">
+              <span class="onboard-step-icon">&#127919;</span>
+              <div>
+                <h3>What are your marketing goals?</h3>
+                <p class="text-muted text-small">Select all that apply. This helps AI prioritize the right content and strategy.</p>
+              </div>
+            </div>
             <div class="stack">
               <div class="checkbox-grid">
-                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="brand awareness" checked><span>Brand Awareness</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="lead generation"><span>Lead Generation</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="sales"><span>Drive Sales</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="engagement"><span>Engagement</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="retention"><span>Customer Retention</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="thought leadership"><span>Thought Leadership</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="brand awareness" checked><span>&#128227; Brand Awareness</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="lead generation"><span>&#129522; Lead Generation</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="sales"><span>&#128176; Drive Sales</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="engagement"><span>&#128588; Engagement</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="retention"><span>&#128149; Retention</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="goal-checkbox" value="thought leadership"><span>&#127891; Thought Leadership</span></label>
               </div>
               <h4 class="mt-1">Which platforms do you use?</h4>
               <div class="checkbox-grid">
-                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="instagram" checked><span>Instagram</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="twitter"><span>Twitter / X</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="linkedin"><span>LinkedIn</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="facebook"><span>Facebook</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="tiktok"><span>TikTok</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="email"><span>Email</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="blog"><span>Blog</span></label>
-                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="youtube"><span>YouTube</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="instagram" checked><span>&#128247; Instagram</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="twitter"><span>&#128038; Twitter / X</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="linkedin"><span>&#128188; LinkedIn</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="facebook"><span>&#128077; Facebook</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="tiktok"><span>&#127916; TikTok</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="email"><span>&#9993; Email</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="blog"><span>&#128221; Blog</span></label>
+                <label class="checkbox-card"><input type="checkbox" class="platform-checkbox" value="youtube"><span>&#127909; YouTube</span></label>
               </div>
               <div class="flex-between mt-1">
-                <button type="button" class="btn btn-ghost onboard-prev">&larr; Back</button>
-                <button type="button" class="btn btn-ai onboard-next"><span class="btn-ai-icon">&#9733;</span> Next: Brand Voice</button>
+                <button type="button" class="btn btn-ghost onboard-prev">&#8592; Back</button>
+                <button type="button" class="btn btn-ai onboard-next"><span class="btn-ai-icon">&#9733;</span> Next: Launch &#8594;</button>
               </div>
             </div>
           </div>
 
           <!-- Step 5: Voice & Launch -->
           <div class="onboard-step card" id="onboardStep5" style="display:none">
-            <h3>Your Brand Voice <span class="badge">Optional</span></h3>
-            <p class="text-muted text-small">Paste 2-3 examples of content you've written, or describe your desired tone. If left blank, AI will generate a voice based on your business profile.</p>
+            <div class="onboard-step-header">
+              <span class="onboard-step-icon">&#127908;</span>
+              <div>
+                <h3>Brand Voice &amp; Launch</h3>
+                <p class="text-muted text-small">Optional: share your brand's tone. If left blank, AI will create one based on your profile.</p>
+              </div>
+            </div>
             <div class="stack">
               <div>
                 <label>Content examples or tone description</label>
@@ -313,7 +344,7 @@
                   </ul>
                 </div>
                 <div class="flex-between mt-1">
-                  <button type="button" class="btn btn-ghost onboard-prev">&larr; Back</button>
+                  <button type="button" class="btn btn-ghost onboard-prev">&#8592; Back</button>
                   <button type="button" class="btn btn-ai btn-lg" id="launchAutopilot"><span class="btn-ai-icon">&#9733;</span> Launch AI Autopilot</button>
                 </div>
               </div>
@@ -1137,61 +1168,80 @@
 
       <!-- AI Brain -->
       <section id="page-brain" class="page">
-        <div class="brain-header card mb-1">
-          <div class="flex-between">
-            <div>
-              <h2 class="mt-0 mb-0">AI Brain</h2>
-              <p class="text-muted text-small mt-0">Self-aware memory, learned insights, activity log, and AI pipelines</p>
+        <!-- Brain Header -->
+        <div class="brain-header-new">
+          <div class="brain-header-content">
+            <div class="brain-header-title">
+              <span class="brain-header-icon">&#129504;</span>
+              <div>
+                <h2>AI Brain</h2>
+                <p>Your AI gets smarter with every tool you use. Track knowledge, insights, and performance.</p>
+              </div>
             </div>
-            <div class="flex gap-1">
-              <button class="btn btn-ai btn-sm" id="brainRefreshBtn">Refresh</button>
-              <button class="btn btn-sm btn-outline" id="brainCapturePerf">Capture Performance</button>
+            <div class="brain-header-actions">
+              <button class="btn btn-sm btn-outline" id="brainCapturePerf" title="Import performance data from published content">&#127919; Capture Performance</button>
+              <button class="btn btn-ai btn-sm" id="brainRefreshBtn">&#8635; Refresh</button>
             </div>
           </div>
         </div>
 
         <!-- Brain Tabs -->
-        <div class="tab-bar mb-1">
-          <button class="tab-btn active" data-tab="brain-overview">Overview</button>
-          <button class="tab-btn" data-tab="brain-learnings">Learnings</button>
-          <button class="tab-btn" data-tab="brain-activity">Activity Log</button>
-          <button class="tab-btn" data-tab="brain-pipelines">Pipelines</button>
-          <button class="tab-btn" data-tab="brain-feedback">Feedback</button>
+        <div class="tab-bar brain-tabs mb-1">
+          <button class="tab-btn active" data-tab="brain-overview">&#9632; Overview</button>
+          <button class="tab-btn" data-tab="brain-learnings">&#128161; Learnings</button>
+          <button class="tab-btn" data-tab="brain-activity">&#128196; Activity</button>
+          <button class="tab-btn" data-tab="brain-pipelines">&#9889; Pipelines</button>
+          <button class="tab-btn" data-tab="brain-feedback">&#127919; Feedback</button>
         </div>
 
-        <!-- Overview Tab -->
+        <!-- Overview Tab — Redesigned -->
         <div class="tab-panel active" id="brain-overview">
-          <div class="metrics-row" id="brainMetrics"></div>
+          <div class="brain-metrics-row" id="brainMetrics"></div>
+
+          <!-- Health Score + Actionable Suggestions -->
+          <div class="card brain-health-card mt-1">
+            <h3 class="mt-0">&#129504; Brain Health</h3>
+            <div id="brainHealthScore"></div>
+          </div>
+
           <div class="row2 mt-1">
             <div class="card">
-              <h3 class="mt-0">Knowledge Coverage</h3>
+              <h3 class="mt-0">&#128200; Knowledge Coverage</h3>
               <div id="brainKnowledgeMap"></div>
             </div>
             <div class="card">
-              <h3 class="mt-0">Strongest Learnings</h3>
+              <h3 class="mt-0">&#128161; Top Insights</h3>
               <div id="brainTopLearnings"></div>
             </div>
           </div>
-          <div class="card mt-1">
-            <h3 class="mt-0">Recent AI Activity</h3>
-            <div id="brainRecentActivity"></div>
+
+          <div class="row2 mt-1">
+            <div class="card">
+              <h3 class="mt-0">&#9889; Recent Activity</h3>
+              <div id="brainRecentActivity"></div>
+            </div>
+            <div class="card">
+              <h3 class="mt-0">&#10148; Suggested Actions</h3>
+              <p class="text-small text-muted mt-0">Based on your knowledge gaps and recent activity</p>
+              <div id="brainQuickActions" class="brain-quick-actions"></div>
+            </div>
           </div>
         </div>
 
         <!-- Learnings Tab -->
         <div class="tab-panel" id="brain-learnings">
           <div class="flex-between mb-1">
-            <div class="flex gap-1">
-              <select id="brainLearningFilter">
+            <div class="flex gap-1" style="align-items:center">
+              <select id="brainLearningFilter" class="input">
                 <option value="">All Categories</option>
-                <option value="audience">Audience</option>
-                <option value="content">Content</option>
-                <option value="strategy">Strategy</option>
-                <option value="performance">Performance</option>
-                <option value="brand">Brand</option>
-                <option value="competitor">Competitor</option>
-                <option value="channel">Channel</option>
-                <option value="timing">Timing</option>
+                <option value="audience">&#9823; Audience</option>
+                <option value="content">&#9998; Content</option>
+                <option value="strategy">&#128202; Strategy</option>
+                <option value="performance">&#127919; Performance</option>
+                <option value="brand">&#127912; Brand</option>
+                <option value="competitor">&#9878; Competitor</option>
+                <option value="channel">&#128225; Channel</option>
+                <option value="timing">&#9200; Timing</option>
               </select>
             </div>
           </div>
@@ -1201,13 +1251,13 @@
         <!-- Activity Log Tab -->
         <div class="tab-panel" id="brain-activity">
           <div class="flex-between mb-1">
-            <select id="brainActivityFilter">
+            <select id="brainActivityFilter" class="input">
               <option value="">All Categories</option>
-              <option value="content">Content</option>
-              <option value="strategy">Strategy</option>
-              <option value="analysis">Analysis</option>
-              <option value="conversation">Conversation</option>
-              <option value="pipeline">Pipeline</option>
+              <option value="content">&#9998; Content</option>
+              <option value="strategy">&#128202; Strategy</option>
+              <option value="analysis">&#128300; Analysis</option>
+              <option value="conversation">&#128172; Conversation</option>
+              <option value="pipeline">&#9889; Pipeline</option>
             </select>
           </div>
           <div id="brainActivityList" class="stack"></div>
@@ -1215,31 +1265,35 @@
 
         <!-- Pipelines Tab -->
         <div class="tab-panel" id="brain-pipelines">
-          <h3 class="mt-0">Pipeline Templates</h3>
-          <p class="text-muted text-small">Chain AI tools together to automate multi-step marketing workflows.</p>
-          <div id="brainPipelineTemplates" class="card-grid mb-2"></div>
+          <div class="brain-pipelines-intro">
+            <h3 class="mt-0">&#9889; AI Pipelines</h3>
+            <p class="text-muted text-small">Chain AI tools into automated multi-step workflows. Pick a template to get started.</p>
+          </div>
+          <div id="brainPipelineTemplates" class="brain-pipeline-grid mb-2"></div>
 
           <!-- Pipeline Runner -->
-          <div class="card hidden" id="brainPipelineRunner">
+          <div class="card brain-pipeline-runner hidden" id="brainPipelineRunner">
             <div class="flex-between">
               <h3 class="mt-0" id="brainPipelineName">Pipeline</h3>
-              <button class="btn btn-ghost btn-sm" id="brainPipelineClose">Close</button>
+              <button class="btn btn-ghost btn-sm" id="brainPipelineClose">&times; Close</button>
             </div>
             <p class="text-muted text-small" id="brainPipelineDesc"></p>
-            <div id="brainPipelineSteps" class="stack mb-1"></div>
+            <div id="brainPipelineSteps" class="mb-1"></div>
             <div id="brainPipelineInputs" class="stack mb-1"></div>
             <button class="btn btn-ai" id="brainPipelineRunBtn"><span class="btn-ai-icon">&#9733;</span> Run Pipeline</button>
             <div id="brainPipelineResults" class="mt-1 hidden"></div>
           </div>
 
-          <h3>Recent Pipeline Runs</h3>
+          <h3>&#128337; Recent Runs</h3>
           <div id="brainPipelineHistory" class="stack"></div>
         </div>
 
         <!-- Feedback Tab -->
         <div class="tab-panel" id="brain-feedback">
-          <h3 class="mt-0">Performance Feedback</h3>
-          <p class="text-muted text-small">How AI-generated content has performed. This data feeds back into AI context for future improvements.</p>
+          <div class="brain-feedback-intro">
+            <h3 class="mt-0">&#127919; Performance Feedback Loop</h3>
+            <p class="text-muted text-small">See how AI-generated content performs. This data feeds back into the AI Brain to improve future results.</p>
+          </div>
           <div id="brainFeedbackList" class="stack"></div>
         </div>
       </section>

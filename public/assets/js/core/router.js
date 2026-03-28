@@ -4,6 +4,8 @@
 
 import { $, copyToClipboard } from './utils.js';
 import { api } from './api.js';
+import { maybeStartPageTour } from './guidedTour.js';
+import { onPageChange as helpWidgetPageChange } from './helpWidget.js';
 
 const pageModules = {};
 let currentPage = null;
@@ -55,6 +57,10 @@ function showPage(page) {
   if (mod && typeof mod.refresh === 'function') {
     mod.refresh();
   }
+
+  // Notify help widget and check for page-specific tours
+  helpWidgetPageChange();
+  maybeStartPageTour(resolvedPage);
 }
 
 export function initRouter() {
