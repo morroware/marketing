@@ -1175,7 +1175,7 @@
               <span class="brain-header-icon">&#129504;</span>
               <div>
                 <h2>AI Brain</h2>
-                <p>Your AI gets smarter with every tool you use. Track knowledge, insights, and performance.</p>
+                <p>Autonomous AI agents, deep search, model routing, and self-improving intelligence.</p>
               </div>
             </div>
             <div class="brain-header-actions">
@@ -1188,17 +1188,19 @@
         <!-- Brain Tabs -->
         <div class="tab-bar brain-tabs mb-1">
           <button class="tab-btn active" data-tab="brain-overview">&#9632; Overview</button>
+          <button class="tab-btn" data-tab="brain-agents">&#129302; Agents</button>
+          <button class="tab-btn" data-tab="brain-search">&#128269; Search</button>
+          <button class="tab-btn" data-tab="brain-models">&#9881; Models</button>
           <button class="tab-btn" data-tab="brain-learnings">&#128161; Learnings</button>
           <button class="tab-btn" data-tab="brain-activity">&#128196; Activity</button>
           <button class="tab-btn" data-tab="brain-pipelines">&#9889; Pipelines</button>
           <button class="tab-btn" data-tab="brain-feedback">&#127919; Feedback</button>
         </div>
 
-        <!-- Overview Tab — Redesigned -->
+        <!-- Overview Tab -->
         <div class="tab-panel active" id="brain-overview">
           <div class="brain-metrics-row" id="brainMetrics"></div>
 
-          <!-- Health Score + Actionable Suggestions -->
           <div class="card brain-health-card mt-1">
             <h3 class="mt-0">&#129504; Brain Health</h3>
             <div id="brainHealthScore"></div>
@@ -1224,6 +1226,178 @@
               <h3 class="mt-0">&#10148; Suggested Actions</h3>
               <p class="text-small text-muted mt-0">Based on your knowledge gaps and recent activity</p>
               <div id="brainQuickActions" class="brain-quick-actions"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agents Tab -->
+        <div class="tab-panel" id="brain-agents">
+          <div class="agent-workspace">
+            <!-- New Task Panel -->
+            <div class="card agent-new-task">
+              <h3 class="mt-0">&#129302; New Agent Task</h3>
+              <p class="text-small text-muted mt-0">Describe your goal and AI agents will autonomously plan, research, create, and analyze.</p>
+              <div class="stack">
+                <div>
+                  <label>Goal</label>
+                  <textarea id="agentGoalInput" class="input" rows="3" placeholder="e.g., Research our competitor Acme Corp, write a counter-positioning blog post, and create social media captions for all platforms"></textarea>
+                </div>
+                <div>
+                  <label>Additional Context <span class="text-muted text-small">(optional)</span></label>
+                  <input id="agentContextInput" class="input" placeholder="e.g., Focus on our pricing advantage, target small business owners" />
+                </div>
+                <div class="flex gap-1" style="align-items:center">
+                  <label class="flex gap-1" style="align-items:center;cursor:pointer">
+                    <input type="checkbox" id="agentAutoApprove" />
+                    <span class="text-small">Auto-approve all steps (skip review gates)</span>
+                  </label>
+                </div>
+                <div class="flex gap-1">
+                  <button class="btn btn-ai" id="agentCreateBtn"><span class="btn-ai-icon">&#9733;</span> Plan &amp; Execute</button>
+                  <button class="btn btn-outline" id="agentPlanOnlyBtn">Plan Only</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Agent Types Info -->
+            <div class="agent-types-grid" id="agentTypesGrid"></div>
+
+            <!-- Active Task Workspace -->
+            <div class="card agent-task-workspace hidden" id="agentTaskWorkspace">
+              <div class="flex-between">
+                <h3 class="mt-0" id="agentTaskTitle">Task</h3>
+                <div class="flex gap-1">
+                  <span class="badge" id="agentTaskStatus">planned</span>
+                  <button class="btn btn-ghost btn-sm" id="agentTaskClose">&times;</button>
+                </div>
+              </div>
+              <p class="text-muted text-small" id="agentTaskGoal"></p>
+
+              <!-- Step Timeline -->
+              <div id="agentStepTimeline" class="agent-step-timeline"></div>
+
+              <!-- Current Step Output -->
+              <div id="agentStepOutput" class="agent-step-output hidden">
+                <h4 class="mt-0">Current Output</h4>
+                <div id="agentStepOutputContent" class="agent-output-content"></div>
+                <div id="agentApprovalActions" class="agent-approval-actions hidden">
+                  <p class="text-small text-muted">Review the output above. Approve to continue or reject with feedback.</p>
+                  <div class="flex gap-1">
+                    <button class="btn btn-success btn-sm" id="agentApproveBtn">&#10003; Approve &amp; Continue</button>
+                    <button class="btn btn-danger btn-sm" id="agentRejectBtn">&#10007; Revise</button>
+                  </div>
+                  <input id="agentFeedbackInput" class="input mt-1" placeholder="Optional feedback for the agent..." />
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex gap-1 mt-1" id="agentTaskActions">
+                <button class="btn btn-ai btn-sm" id="agentExecuteNextBtn"><span class="btn-ai-icon">&#9654;</span> Execute Next Step</button>
+                <button class="btn btn-outline btn-sm" id="agentExecuteAllBtn">&#9654;&#9654; Execute All</button>
+                <button class="btn btn-ghost btn-sm text-danger" id="agentCancelBtn">Cancel Task</button>
+              </div>
+            </div>
+
+            <!-- Task History -->
+            <h3 class="mt-2">&#128337; Recent Tasks</h3>
+            <div id="agentTaskHistory" class="stack"></div>
+          </div>
+        </div>
+
+        <!-- Search Tab -->
+        <div class="tab-panel" id="brain-search">
+          <div class="card search-panel">
+            <h3 class="mt-0">&#128269; AI Deep Search</h3>
+            <p class="text-small text-muted mt-0">Search across your data, the web, and specific websites. AI synthesizes findings into actionable intelligence.</p>
+            <div class="stack">
+              <div>
+                <label>Search Query</label>
+                <textarea id="searchQueryInput" class="input" rows="2" placeholder="e.g., What content strategies work best in our industry? How are competitors positioning themselves?"></textarea>
+              </div>
+              <div class="flex gap-1 flex-wrap" style="align-items:center">
+                <label class="search-source-toggle">
+                  <input type="checkbox" id="searchSourceInternal" checked /> <span>&#128451; Your Data</span>
+                </label>
+                <label class="search-source-toggle">
+                  <input type="checkbox" id="searchSourceWeb" /> <span>&#127760; Web Research</span>
+                </label>
+                <label class="search-source-toggle">
+                  <input type="checkbox" id="searchSourceWebsite" /> <span>&#128279; Analyze URL</span>
+                </label>
+              </div>
+              <div id="searchUrlField" class="hidden">
+                <label>Website URL</label>
+                <input id="searchUrlInput" class="input" placeholder="https://example.com/page-to-analyze" />
+              </div>
+              <button class="btn btn-ai" id="searchExecuteBtn"><span class="btn-ai-icon">&#128269;</span> Search</button>
+            </div>
+          </div>
+
+          <!-- Search Results -->
+          <div id="searchResults" class="mt-1 hidden">
+            <div class="card">
+              <div class="flex-between">
+                <h3 class="mt-0">&#9889; AI Synthesis</h3>
+                <span id="searchResultsCount" class="text-small text-muted"></span>
+              </div>
+              <div id="searchSynthesis" class="search-synthesis"></div>
+            </div>
+
+            <div id="searchInternalResults" class="mt-1 hidden">
+              <h3>&#128451; Internal Data Matches</h3>
+              <div id="searchInternalList" class="stack"></div>
+            </div>
+
+            <div id="searchWebResults" class="mt-1 hidden">
+              <h3>&#127760; Web Research</h3>
+              <div id="searchWebContent" class="card search-web-content"></div>
+            </div>
+
+            <div id="searchWebsiteResults" class="mt-1 hidden">
+              <h3>&#128279; Website Analysis</h3>
+              <div id="searchWebsiteContent" class="card search-website-content"></div>
+            </div>
+          </div>
+
+          <!-- Search History -->
+          <h3 class="mt-2">&#128337; Recent Searches</h3>
+          <div id="searchHistory" class="stack"></div>
+        </div>
+
+        <!-- Model Routing Tab -->
+        <div class="tab-panel" id="brain-models">
+          <div class="card">
+            <h3 class="mt-0">&#9881; Model Routing</h3>
+            <p class="text-small text-muted mt-0">Assign specific AI providers and models to different task types. For example, use GPT-4.1 for copywriting but Claude for analysis.</p>
+            <div id="modelRoutingGrid" class="model-routing-grid"></div>
+          </div>
+          <div class="card mt-1">
+            <h3 class="mt-0">&#128296; Configure Route</h3>
+            <div class="stack">
+              <div class="row2">
+                <div>
+                  <label>Task Type</label>
+                  <select id="modelRoutingTaskType" class="input">
+                    <option value="">Select task type...</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Provider</label>
+                  <select id="modelRoutingProvider" class="input">
+                    <option value="">Default provider</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label>Model</label>
+                <select id="modelRoutingModel" class="input">
+                  <option value="">Default model</option>
+                </select>
+              </div>
+              <div class="flex gap-1">
+                <button class="btn btn-ai btn-sm" id="modelRoutingSaveBtn">Save Route</button>
+                <button class="btn btn-ghost btn-sm text-danger" id="modelRoutingDeleteBtn">Reset to Default</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1258,6 +1432,8 @@
               <option value="analysis">&#128300; Analysis</option>
               <option value="conversation">&#128172; Conversation</option>
               <option value="pipeline">&#9889; Pipeline</option>
+              <option value="agent">&#129302; Agent</option>
+              <option value="research">&#128269; Research</option>
             </select>
           </div>
           <div id="brainActivityList" class="stack"></div>
@@ -1271,7 +1447,6 @@
           </div>
           <div id="brainPipelineTemplates" class="brain-pipeline-grid mb-2"></div>
 
-          <!-- Pipeline Runner -->
           <div class="card brain-pipeline-runner hidden" id="brainPipelineRunner">
             <div class="flex-between">
               <h3 class="mt-0" id="brainPipelineName">Pipeline</h3>

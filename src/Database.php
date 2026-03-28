@@ -762,6 +762,47 @@ final class Database
         $this->applySafeAlter('ai_shared_memory', 'access_count', 'INTEGER DEFAULT 0');
         $this->applySafeAlter('ai_shared_memory', 'expires_at', 'TEXT');
         $this->applySafeAlter('ai_shared_memory', 'category', 'TEXT DEFAULT "general"');
+
+        /* ---- Phase 11: AI Agent System & Model Routing ---- */
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ai_agent_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            goal TEXT NOT NULL,
+            context TEXT DEFAULT "",
+            status TEXT DEFAULT "planned",
+            plan_json TEXT DEFAULT "[]",
+            results_json TEXT DEFAULT "[]",
+            model_config_json TEXT DEFAULT "{}",
+            auto_approve INTEGER DEFAULT 0,
+            steps_completed INTEGER DEFAULT 0,
+            steps_total INTEGER DEFAULT 0,
+            current_step_output TEXT DEFAULT "",
+            completed_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )');
+        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_ai_agent_tasks_status ON ai_agent_tasks(status)');
+        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_ai_agent_tasks_created ON ai_agent_tasks(created_at DESC)');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ai_model_routing (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_type TEXT NOT NULL UNIQUE,
+            provider TEXT NOT NULL DEFAULT "",
+            model TEXT NOT NULL DEFAULT "",
+            label TEXT DEFAULT "",
+            updated_at TEXT NOT NULL
+        )');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ai_search_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            query TEXT NOT NULL,
+            sources TEXT DEFAULT "internal",
+            url TEXT DEFAULT "",
+            results_count INTEGER DEFAULT 0,
+            summary TEXT DEFAULT "",
+            created_at TEXT NOT NULL
+        )');
+        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_ai_search_history_created ON ai_search_history(created_at DESC)');
     }
 
     private function applySafeAlter(string $table, string $column, string $type): void
