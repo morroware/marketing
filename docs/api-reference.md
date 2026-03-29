@@ -324,6 +324,7 @@ Also: `rejected`, `failed`
 | DELETE | `/api/rss-feeds/{id}` | Delete feed + items |
 | POST | `/api/rss-feeds/{id}/fetch` | Fetch feed items now |
 | GET | `/api/rss-items` | List items. Filter: `feed_id` |
+| PATCH | `/api/rss-items/{id}` | Mark item as curated |
 
 ## Webhooks
 
@@ -352,6 +353,18 @@ Requests include:
 - `X-Webhook-Event`: Event name
 - `Content-Type`: application/json
 
+## Reviews & Reputation
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/reviews/stats` | Review stats (count, average rating, sentiment) |
+| GET | `/api/reviews` | List reviews. Filter: `platform`, `rating`, `status` |
+| POST | `/api/reviews` | Create review: `platform`, `reviewer_name`, `rating`, `content`, `review_date` |
+| GET | `/api/reviews/{id}` | Get single review |
+| PUT | `/api/reviews/{id}` | Update review |
+| DELETE | `/api/reviews/{id}` | Delete review |
+| POST | `/api/reviews/{id}/respond` | AI-generate review response |
+
 ## Settings
 
 | Method | Endpoint | Description |
@@ -368,6 +381,8 @@ Requests include:
 
 ## WordPress Plugin API
 
+### Marketing Suite Posts
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/wordpress-plugin/status` | Connection test |
@@ -376,6 +391,45 @@ Requests include:
 | GET | `/api/wordpress-plugin/posts/{id}` | Get single post |
 | POST | `/api/wordpress-plugin/posts` | Create post from WordPress |
 | PUT | `/api/wordpress-plugin/posts/{id}` | Update post |
+| DELETE | `/api/wordpress-plugin/posts/{id}` | Delete post |
+
+### WordPress Content (Remote)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/wordpress-plugin/wp-posts` | List WP posts |
+| GET | `/api/wordpress-plugin/wp-posts/{id}` | Get single WP post |
+| PUT | `/api/wordpress-plugin/wp-posts/{id}` | Update WP post |
+| DELETE | `/api/wordpress-plugin/wp-posts/{id}` | Trash WP post |
+| GET | `/api/wordpress-plugin/wp-pages` | List WP pages |
+| GET | `/api/wordpress-plugin/wp-media` | List WP media |
+| GET | `/api/wordpress-plugin/wp-site-info` | Get WP site info |
+| POST | `/api/wordpress-plugin/publish-to-wp` | Push post to WordPress |
+| POST | `/api/wordpress-plugin/bulk-push` | Bulk push posts to WordPress |
+| POST | `/api/wordpress-plugin/bulk-import` | Bulk import posts from WordPress |
+
+### Taxonomy & Sync
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/wordpress-plugin/wp-categories` | List WP categories |
+| POST | `/api/wordpress-plugin/wp-categories` | Create WP category |
+| GET | `/api/wordpress-plugin/wp-tags` | List WP tags |
+| POST | `/api/wordpress-plugin/wp-tags` | Create WP tag |
+| GET | `/api/wordpress-plugin/taxonomy-map` | List taxonomy mappings |
+| POST | `/api/wordpress-plugin/taxonomy-map` | Create taxonomy mapping |
+| DELETE | `/api/wordpress-plugin/taxonomy-map/{id}` | Delete taxonomy mapping |
+| GET | `/api/wordpress-plugin/sync-map` | Get content sync map |
+
+### Webhooks & Memory
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/wordpress-plugin/webhook` | Receive webhook events from WP |
+| GET | `/api/wordpress-plugin/webhook-log` | View webhook event log |
+| GET | `/api/wordpress-plugin/memory` | Get shared AI memory entries |
+| POST | `/api/wordpress-plugin/memory` | Save shared AI memory entry |
+| GET | `/api/wordpress-plugin/accounts` | List connected WordPress accounts |
 
 ## Public Endpoints (No Authentication)
 
@@ -392,7 +446,7 @@ Requests include:
 
 ## AI Endpoints
 
-See **[AI System](ai-system.md)** for the complete list of 60+ AI endpoints with parameters and response formats.
+See **[AI System](ai-system.md)** for the complete list of AI endpoints organized by category (content creation, analysis, strategy, brain, pipelines, search, agents, and model routing) with parameters and response formats.
 
 ---
 

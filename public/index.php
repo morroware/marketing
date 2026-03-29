@@ -174,8 +174,10 @@ if (!empty($sharedMemoryRows)) {
     $ai->setSharedMemory($sharedMemoryRows);
 }
 
-// Run memory maintenance on each request (lightweight)
-$memoryEngine->maintenance();
+// Run memory maintenance occasionally (1% of requests) to avoid per-request overhead
+if (random_int(1, 100) === 1) {
+    $memoryEngine->maintenance();
+}
 
 $emailService = null;
 if (class_exists('EmailService')) {

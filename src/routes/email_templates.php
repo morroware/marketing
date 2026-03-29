@@ -8,7 +8,7 @@ function register_email_template_routes(Router $router, EmailTemplateRepository 
 
     $router->get('/api/email-templates/{id}', function (array $params) use ($emailTemplates) {
         $tpl = $emailTemplates->find((int)$params['id']);
-        $tpl ? json_response($tpl) : json_response(['error' => 'Not found'], 404);
+        $tpl ? json_response(['item' => $tpl]) : json_response(['error' => 'Not found'], 404);
     });
 
     $router->post('/api/email-templates', function () use ($emailTemplates) {

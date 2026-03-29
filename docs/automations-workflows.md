@@ -290,7 +290,6 @@ Mark items as curated for later use:
 
 ```
 PATCH /api/rss-items/{id}
-{ "is_curated": true }
 ```
 
 ---

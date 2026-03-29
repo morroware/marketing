@@ -188,7 +188,6 @@ Tone: {$tone}
 Write a concise, authentic response (2-4 sentences). Do not use generic templates. Be specific to what the reviewer said. Do not include a subject line or greeting — start directly with the response text.
 PROMPT;
 
-        $systemPrompt = $aiService->buildSystemPrompt();
         $body = $aiService->generate($prompt);
 
         json_response([
