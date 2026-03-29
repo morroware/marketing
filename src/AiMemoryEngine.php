@@ -1120,6 +1120,18 @@ Return ONLY valid JSON array.";
                 return [$input['topic'] ?? '', $input['platform'] ?? 'instagram'];
             case 'seoKeywordResearch':
                 return [$input['topic'] ?? '', $input['niche'] ?? $input['intent'] ?? 'informational'];
+            case 'socialStrategy':
+                return [$input['goals'] ?? '', $input['currentState'] ?? $input['current_state'] ?? ''];
+            case 'contentCalendarMonth':
+                return [$input['month'] ?? date('F Y'), $input['goals'] ?? '', $input['channels'] ?? ''];
+            case 'smartPostingTime':
+                return [$input['platform'] ?? 'instagram', $input['audience'] ?? '', $input['contentType'] ?? $input['content_type'] ?? ''];
+            case 'refineContent':
+                return [$input['content'] ?? '', $input['action'] ?? 'improve', $input['context'] ?? null];
+            case 'contentBrief':
+                return [$input['topic'] ?? '', $input['contentType'] ?? $input['content_type'] ?? 'blog_post', $input['goal'] ?? 'engagement'];
+            case 'aiInsights':
+                return [$input];
             default:
                 return [$input];
         }

@@ -367,7 +367,13 @@ final class AiOrchestrator
                 continue;
             }
             $value = str_replace('{{prev_summary}}', $prevSummary, $value);
-            $value = str_replace('{{prev.content}}', $prevOutput, $value);
+            // Extract just the content field from the previous output JSON, not the whole blob
+            $prevContent = $prevOutput;
+            $prevDecoded = json_decode($prevOutput, true);
+            if (is_array($prevDecoded) && isset($prevDecoded['content'])) {
+                $prevContent = is_string($prevDecoded['content']) ? $prevDecoded['content'] : json_encode($prevDecoded['content']);
+            }
+            $value = str_replace('{{prev.content}}', $prevContent, $value);
             foreach ($variables as $varName => $varValue) {
                 $value = str_replace('{{' . $varName . '}}', (string)$varValue, $value);
             }

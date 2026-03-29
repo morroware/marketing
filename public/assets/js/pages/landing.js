@@ -142,10 +142,12 @@ Make the body_html include 2-3 sections with h2 headings and paragraphs about be
 export async function refresh() {
   // Reset editing state on page re-entry
   editingPageId = null;
+  pageSections = [];
   const form = document.getElementById('landingPageForm');
   if (form) form.reset();
   const submitBtn = form?.querySelector('button[type="submit"]');
   if (submitBtn) submitBtn.textContent = 'Create Page';
+  renderSections();
 
   await Promise.all([loadPages(), loadFormOptions(), loadCampaignOptions()]);
 }

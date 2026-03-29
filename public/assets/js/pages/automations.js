@@ -79,6 +79,10 @@ export function init() {
 }
 
 export async function refresh() {
+  // Reset visual builder state on page re-entry
+  workflowBlocks = [];
+  selectedBlockIdx = -1;
+  renderCanvas();
   await loadAutomations();
 }
 

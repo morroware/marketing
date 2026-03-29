@@ -66,13 +66,13 @@ $emailServiceFile = APP_ROOT . '/src/EmailService.php';
 if (is_file($emailServiceFile)) {
     require $emailServiceFile;
     $emailService = new EmailService($pdo, [
-        'smtp_host'      => env_value('SMTP_HOST', ''),
-        'smtp_port'      => (int) env_value('SMTP_PORT', '587'),
-        'smtp_user'      => env_value('SMTP_USER', ''),
-        'smtp_pass'      => env_value('SMTP_PASS', ''),
-        'smtp_from'      => env_value('SMTP_FROM', ''),
-        'smtp_from_name' => env_value('SMTP_FROM_NAME', env_value('BUSINESS_NAME', '')),
-        'base_url'       => env_value('APP_URL', ''),
+        'smtp_host'      => app_config('SMTP_HOST', ''),
+        'smtp_port'      => (int) app_config('SMTP_PORT', '587'),
+        'smtp_user'      => app_config('SMTP_USER', ''),
+        'smtp_pass'      => app_config('SMTP_PASS', ''),
+        'smtp_from'      => app_config('SMTP_FROM', ''),
+        'smtp_from_name' => app_config('SMTP_FROM_NAME', app_config('BUSINESS_NAME', '')),
+        'base_url'       => app_config('APP_URL', ''),
     ]);
 }
 

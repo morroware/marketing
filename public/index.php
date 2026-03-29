@@ -106,7 +106,8 @@ $campaignMetrics = new CampaignMetricsRepository($pdo);
 /* ---- Services ---- */
 $auth      = new Auth($pdo);
 $mediaLib  = new MediaLibrary($pdo, $dataDir);
-$scheduler = new Scheduler($pdo, class_exists('SocialPublisher') ? new SocialPublisher($pdo) : null, $dataDir);
+$socialPublisher = class_exists('SocialPublisher') ? new SocialPublisher($pdo) : null;
+$scheduler = new Scheduler($pdo, $socialPublisher, $dataDir);
 $scheduler->setQueue($socialQueue);
 
 $ai = new AiService(
@@ -189,13 +190,13 @@ if (random_int(1, 100) === 1) {
 $emailService = null;
 if (class_exists('EmailService')) {
     $emailService = new EmailService($pdo, [
-        'smtp_host'      => env_value('SMTP_HOST', ''),
-        'smtp_port'      => (int)env_value('SMTP_PORT', '587'),
-        'smtp_user'      => env_value('SMTP_USER', ''),
-        'smtp_pass'      => env_value('SMTP_PASS', ''),
-        'smtp_from'      => env_value('SMTP_FROM', ''),
-        'smtp_from_name' => env_value('SMTP_FROM_NAME', env_value('BUSINESS_NAME', '')),
-        'base_url'       => env_value('APP_URL', ''),
+        'smtp_host'      => app_config('SMTP_HOST', ''),
+        'smtp_port'      => (int)app_config('SMTP_PORT', '587'),
+        'smtp_user'      => app_config('SMTP_USER', ''),
+        'smtp_pass'      => app_config('SMTP_PASS', ''),
+        'smtp_from'      => app_config('SMTP_FROM', ''),
+        'smtp_from_name' => app_config('SMTP_FROM_NAME', app_config('BUSINESS_NAME', '')),
+        'base_url'       => app_config('APP_URL', ''),
     ]);
 }
 $smsService = null;
@@ -227,8 +228,6 @@ $scheduler->registerJobHandler('email_campaign', function (array $payload) use (
         throw new \RuntimeException('Campaign send failed: ' . implode('; ', $result['errors']));
     }
 });
-
-$socialPublisher = class_exists('SocialPublisher') ? new SocialPublisher($pdo) : null;
 
 /* ---- Request dispatch ---- */
 $method = $_SERVER['REQUEST_METHOD'];

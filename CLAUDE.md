@@ -32,6 +32,8 @@ public/
         router.js             # SPA hash router, tab switching, sidebar toggles, AI command bar
         utils.js              # DOM helpers ($, $$, escapeHtml, formatDateTime, etc.)
         toast.js              # Notification system
+        helpWidget.js         # Contextual help sidebar widget
+        guidedTour.js         # First-run guided tour system
       pages/                  # One module per page (exports init() + refresh())
         ai.js                 # AI Studio - 25+ tools with categories
         assistant.js          # AI Writing Assistant - floating refinement panel
@@ -57,6 +59,7 @@ public/
         links.js              # UTM builder, short links
         seo.js                # SEO tools (keywords, blog generator)
         rss.js                # RSS feed reader
+        reviews.js            # Business reviews management + AI responses
         settings.js           # App config, health, backups
         login.js              # Auth flow
 
@@ -103,7 +106,55 @@ src/
     posts.php                 # Full CRUD, calendar, bulk ops, approval workflows
     auth.php                  # Login, logout, setup status
     settings.php              # App config, health check, backups, Twilio settings
-    campaigns.php, contacts.php, email.php, etc.
+    campaigns.php             # Campaign CRUD
+    contacts.php              # Contact CRUD, import/export, activities
+    email.php                 # Email lists, subscribers, campaigns, send
+    email_templates.php       # Email template CRUD + rendering
+    social.php                # Social account management
+    social_queue.php          # Publish queue management
+    landing_pages.php         # Landing page CRUD + preview
+    forms.php                 # Form builder CRUD + submissions
+    funnels.php               # Sales funnel CRUD
+    ab_tests.php              # A/B test CRUD + conversions
+    automations.php           # Automation rule CRUD + trigger firing
+    segments.php              # Segment CRUD + member evaluation
+    templates.php             # Template + brand profile CRUD
+    links.php                 # Short links + UTM links
+    utm.php                   # UTM link management
+    rss.php                   # RSS feed CRUD
+    media.php                 # File upload/download
+    webhooks_routes.php       # Webhook CRUD
+    analytics_routes.php      # Analytics events + chart data
+    campaign_metrics.php      # Campaign ROI metrics
+    competitors.php           # Competitor CRUD
+    dashboard.php             # Dashboard metrics + AI insights
+    onboarding.php            # Business profile + wizard
+    autopilot.php             # AI Autopilot launch + status + assets
+    kpis.php                  # KPI tracking
+    reviews.php               # Business review management
+    cron.php                  # Manual cron trigger route
+    wordpress_plugin.php      # WordPress sync endpoints
+
+landing/                      # Standalone marketing landing site
+  index.html                  # Product showcase page
+  assets/
+    styles.css                # Landing page styles
+    app.js                    # Landing page interactivity
+
+wordpress-plugin/             # WordPress integration plugin
+  marketing-suite-connector/
+    marketing-suite-connector.php  # Plugin bootstrap
+    includes/
+      class-msc-api-client.php     # API client for Marketing Suite
+      class-msc-settings.php       # Plugin settings page
+      class-msc-content-sync.php   # Content synchronization
+      class-msc-taxonomy-sync.php  # Taxonomy sync
+      class-msc-webhook.php        # Webhook receiver
+      class-msc-post-metabox.php   # Post editor metabox
+      class-msc-dashboard-widget.php # Dashboard widget
+    assets/
+      admin.css               # Admin styles
+      admin.js                # Admin scripts
 ```
 
 ## AI System
@@ -133,7 +184,7 @@ Methods are split across tool classes, each mapping to `/api/ai/*` endpoints:
 - `refineContent()` -> `/api/ai/refine` (12 actions: improve, expand, shorten, formal, casual, persuasive, storytelling, simplify, add_hooks, add_cta, emoji, bullet_points)
 - `contentBrief()` -> `/api/ai/brief` (full content brief with outline, SEO, distribution plan)
 - `headlineOptimizer()` -> `/api/ai/headlines` (10 variations with psychological triggers)
-- `contentWorkflow()` -> `/api/ai/content-workflow`
+- `contentWorkflow()` -> `/api/ai/workflow`
 - `buildBrandVoice()` -> `/api/ai/brand-voice`
 - `rssToPost()` -> `/api/ai/rss-to-post`
 - `emailDripSequence()` -> `/api/ai/drip-sequence`
@@ -342,7 +393,7 @@ Theme is controlled by CSS variables on `:root` (dark) and `body.light` (light).
 AI-specific styling uses purple gradient: `linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7)`.
 
 ### CSS Utility Classes
-Key utility classes: `.hidden`, `.flex`, `.flex-between`, `.flex-end`, `.mt-1`, `.mb-1`, `.mb-2`, `.text-muted`, `.text-secondary`, `.text-small`, `.text-success`, `.text-danger`, `.w-full`, `.gap-1`, `.flex-wrap`.
+Key utility classes: `.hidden`, `.flex`, `.flex-between`, `.flex-end`, `.mt-0`, `.mt-1`, `.mt-2`, `.mb-1`, `.mb-2`, `.ml-1`, `.p-1`, `.text-muted`, `.text-secondary`, `.text-small`, `.text-success`, `.text-danger`, `.w-full`, `.gap-1`, `.flex-wrap`.
 
 Button variants: `.btn`, `.btn-ai` (AI purple gradient), `.btn-ghost` (transparent), `.btn-outline`, `.btn-success`, `.btn-danger`, `.btn-warning`, `.btn-sm`, `.btn-lg`.
 
@@ -377,7 +428,8 @@ Button variants: `.btn`, `.btn-ai` (AI purple gradient), `.btn-ghost` (transpare
 - `webhooks`, `cron_log`, `rss_feeds`, `rss_items`
 - `ai_activity_log`, `ai_learnings`, `ai_performance_feedback` - AI Brain
 - `ai_pipelines`, `ai_pipeline_runs` - AI Pipeline execution
-- `ai_agent_tasks` - AI Agent system
+- `ai_agent_tasks` - AI Agent system (goal, context, plan_json, model_config_json)
+- `ai_tasks` - AI Autopilot tasks (task_type, steps_config, results, step tracking)
 - `ai_model_routing` - Task-type model routing
 - `ai_search_history` - AI Search history
 - `ai_shared_memory` - Shared AI memory/context (with category + expiry)
@@ -429,7 +481,8 @@ MISTRAL_API_KEY, MISTRAL_MODEL
 OPENROUTER_API_KEY, OPENROUTER_MODEL
 XAI_API_KEY, XAI_MODEL
 TOGETHER_API_KEY, TOGETHER_MODEL
-BANANA_API_KEY, BANANA_BASE_URL, BANANA_MODEL_ID   # Image generation
+BANANA_API_KEY, BANANA_BASE_URL, BANANA_MODEL_ID   # Image generation (Banana)
+# Image generation also supports: OPENAI_API_KEY (DALL-E 3), GEMINI_API_KEY (Imagen)
 
 # Application
 APP_URL, APP_FORCE_HTTPS, MAX_UPLOAD_MB, CRON_KEY
@@ -463,6 +516,22 @@ $jobQueue = new JobQueue($pdo);
 $scheduler->setJobQueue($jobQueue);
 $scheduler->registerJobHandler('email_campaign', function ($payload) use ($emailService) { ... });
 ```
+
+## Configuration System
+
+Settings are resolved via a two-tier system:
+
+1. **`app_config($key, $default)`** — Checks DB-backed settings first (`settings` table via `db_setting()`), falls back to `.env` values via `env_value()`
+2. **`env_value($key, $default)`** — Reads from `.env` file only (parsed once and cached in static)
+3. **`db_setting($key, $value, $pdo)`** — Direct DB settings access; must be initialized with `db_setting('_init', null, $pdo)` before use
+
+**Important:** `app_config()` should be used everywhere except before DB initialization. The Settings UI saves values to the `settings` table, which `app_config()` reads first. Using raw `env_value()` bypasses DB overrides.
+
+### Image Generation Providers
+`AiService::generateImage()` supports three providers with auto-selection:
+- **Banana** (custom Stable Diffusion) — preferred when `BANANA_API_KEY` is set
+- **OpenAI DALL-E 3** — fallback when `OPENAI_API_KEY` is set
+- **Google Gemini Imagen** — fallback when `GEMINI_API_KEY` is set
 
 ## Development Notes
 
@@ -502,6 +571,40 @@ $scheduler->registerJobHandler('email_campaign', function ($payload) use ($email
 - `AiAgentSystem` uses `plan_json` column (not `plan`) — `getTaskDetails()` decodes it into `$task['plan']`
 - `JobQueue` uses `DATE_ATOM` format consistently for all timestamps
 - Page modules should reset editing state in `refresh()` to prevent stale form data across navigations
+- Page modules should also reset visual builder state (e.g., `formFields`, `pageSections`, `workflowBlocks`) in `refresh()` to prevent stale builder UI
+- Use `app_config()` instead of `env_value()` for all service configuration (SMTP, Twilio, etc.) to respect DB-backed settings overrides
+- `index.php` creates a single `SocialPublisher` instance shared between `Scheduler` and route handlers to prevent state desync
+- Recurring posts only spawn from original parent (`recurring_parent_id IS NULL`) to prevent exponential duplication
+- All date/time comparisons in Scheduler use `DATE_ATOM` format consistently to prevent string comparison mismatches
+- Scheduler lock acquisition limits stale-lock retry to once to prevent infinite recursion
+- Email campaign sends mark status as `'failed'` (not `'sent'`) when zero emails succeed
+
+### AI Autopilot (`AiAutopilot.php`)
+Automated onboarding content bootstrapping system. Runs a 9-step pipeline to bootstrap a new user's marketing environment.
+
+**Steps:** research → persona → competitors → brand_voice → strategy → calendar → content → campaign → ideas
+
+**Features:**
+- **Synchronous Mode**: `launchOnboarding()` runs all steps inline (for debugging)
+- **Async Mode**: `launchOnboardingAsync()` returns task ID immediately; route handler runs work via `fastcgi_finish_request()` background processing
+- **Campaign Autopilot**: `launchCampaignAutopilot()` generates strategy + content for a specific campaign
+- **Weekly Plan**: `generateWeeklyPlan()` creates a week of content suggestions
+- **Asset Management**: Generated content stored as reviewable assets (pending_review → approved/rejected)
+
+**API Endpoints:**
+- `POST /api/autopilot/launch` — Launch onboarding autopilot (async)
+- `POST /api/autopilot/campaign` — Launch campaign-specific autopilot
+- `POST /api/autopilot/weekly` — Generate weekly content plan
+- `GET /api/autopilot/status` — Poll task status by ID or latest
+- `GET /api/autopilot/assets` — List generated assets
+- `POST /api/autopilot/assets/approve` — Approve single asset
+- `POST /api/autopilot/assets/approve-all` — Approve all pending assets
+- `POST /api/autopilot/assets/reject` — Reject single asset
+- `POST /api/autopilot/assets/reject-all` — Reject all pending assets
+
+**Database Tables:**
+- `ai_tasks` — Autopilot task state (task_type, status, step_current, step_total, steps_config, results)
+- `ai_assets` — Generated content assets with review status
 
 ### Extended AI Routes (routes/ai.php)
 17 additional AI endpoints added beyond the core tool methods:
@@ -523,9 +626,30 @@ All use `generateAdvanced($system, $prompt)` for custom system prompts with brai
 
 ### Automation Actions
 `AutomationRepository::fire()` supports these action types:
-- `add_tag` / `remove_tag` — Modify contact tags
-- `update_score` — Adjust contact lead score
+- `tag_contact` — Add tag to contact
+- `update_contact_stage` — Update contact pipeline stage
+- `add_score` — Add to contact lead score
 - `add_to_list` — Add contact to email subscriber list
 - `send_email` — Send email via `EmailService` (requires injection in constructor)
 - `send_sms` — Send SMS via `SmsService` / Twilio (requires Twilio config in .env)
 - `send_webhook` — POST to external URL with SSRF protection + DNS pinning
+- `log_activity` — Log a contact activity entry
+
+## WordPress Plugin
+
+The `wordpress-plugin/marketing-suite-connector/` directory contains a WordPress plugin for bidirectional content sync.
+
+**Features:**
+- **Content Sync**: Push/pull posts between WordPress and Marketing Suite
+- **Taxonomy Sync**: Map WordPress categories/tags to Marketing Suite campaigns
+- **Webhook Receiver**: Accepts webhooks from Marketing Suite for real-time updates
+- **Post Metabox**: Edit Marketing Suite metadata directly in the WordPress post editor
+- **Dashboard Widget**: Marketing Suite stats widget on WordPress dashboard
+- **Settings Page**: Configure API URL, authentication, and sync preferences
+
+**API Routes** (in `routes/wordpress_plugin.php`):
+- Endpoints for WordPress plugin to authenticate and sync content
+
+## Landing Site
+
+The `landing/` directory contains a standalone marketing landing page showcasing the platform's capabilities. Static HTML/CSS/JS with no server-side dependencies.

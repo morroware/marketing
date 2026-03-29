@@ -24,6 +24,12 @@ export function init() {
 }
 
 export async function refresh() {
+  // Reset form field builder state on page re-entry
+  formFields = [
+    { name: 'email', label: 'Email', type: 'email', required: true, placeholder: '', help_text: '', options: [] },
+    { name: 'name', label: 'Full Name', type: 'text', required: true, placeholder: '', help_text: '', options: [] },
+  ];
+  renderFieldBuilder();
   await Promise.all([loadForms(), loadListOptions(), loadSubmissionFormOptions()]);
 }
 

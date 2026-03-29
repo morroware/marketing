@@ -112,7 +112,7 @@ final class Scheduler
      */
     private function publishDuePosts(): array
     {
-        $now = gmdate('Y-m-d\TH:i:s');
+        $now = gmdate(DATE_ATOM);
         $stmt = $this->pdo->prepare("
             SELECT p.*, GROUP_CONCAT(sa.id) as account_ids
             FROM posts p
@@ -208,12 +208,14 @@ final class Scheduler
      */
     private function processRecurring(): int
     {
+        // Only select original recurring posts (not children) to prevent exponential duplication
         $stmt = $this->pdo->query("
             SELECT * FROM posts
             WHERE status = 'published'
               AND recurrence IS NOT NULL
               AND recurrence != 'none'
               AND recurrence != ''
+              AND (recurring_parent_id IS NULL OR recurring_parent_id = 0)
               AND (published_at >= datetime('now', '-90 days') OR created_at >= datetime('now', '-90 days'))
             ORDER BY id DESC
             LIMIT 100
@@ -222,7 +224,7 @@ final class Scheduler
         $created = 0;
 
         foreach ($posts as $post) {
-            // Check if next occurrence already exists
+            // Check if next occurrence already exists (from this parent or any child)
             $check = $this->pdo->prepare("
                 SELECT COUNT(*) FROM posts
                 WHERE recurring_parent_id = :pid AND status IN ('draft', 'scheduled')
@@ -232,7 +234,20 @@ final class Scheduler
                 continue; // next occurrence already queued
             }
 
-            $nextDate = $this->calculateNextDate($post['scheduled_for'] ?? $post['published_at'] ?? gmdate(DATE_ATOM), $post['recurrence']);
+            // Find the most recent child to calculate next date from
+            $latestChild = $this->pdo->prepare("
+                SELECT scheduled_for, published_at FROM posts
+                WHERE recurring_parent_id = :pid
+                ORDER BY COALESCE(scheduled_for, published_at, created_at) DESC
+                LIMIT 1
+            ");
+            $latestChild->execute([':pid' => $post['id']]);
+            $latest = $latestChild->fetch(PDO::FETCH_ASSOC);
+
+            $baseDate = $latest
+                ? ($latest['scheduled_for'] ?? $latest['published_at'] ?? gmdate(DATE_ATOM))
+                : ($post['scheduled_for'] ?? $post['published_at'] ?? gmdate(DATE_ATOM));
+            $nextDate = $this->calculateNextDate($baseDate, $post['recurrence']);
             if (!$nextDate) {
                 continue;
             }
@@ -275,10 +290,10 @@ final class Scheduler
         }
 
         return match ($recurrence) {
-            'daily' => $dt->modify('+1 day')->format('Y-m-d\TH:i:s'),
-            'weekly' => $dt->modify('+1 week')->format('Y-m-d\TH:i:s'),
-            'biweekly' => $dt->modify('+2 weeks')->format('Y-m-d\TH:i:s'),
-            'monthly' => $dt->modify('+1 month')->format('Y-m-d\TH:i:s'),
+            'daily' => $dt->modify('+1 day')->format(DATE_ATOM),
+            'weekly' => $dt->modify('+1 week')->format(DATE_ATOM),
+            'biweekly' => $dt->modify('+2 weeks')->format(DATE_ATOM),
+            'monthly' => $dt->modify('+1 month')->format(DATE_ATOM),
             default => null,
         };
     }
@@ -379,7 +394,7 @@ final class Scheduler
             return ['count' => 0, 'errors' => []];
         }
 
-        $now = gmdate('Y-m-d\TH:i:s');
+        $now = gmdate(DATE_ATOM);
         $stmt = $this->pdo->prepare("
             SELECT sq.*, p.platform, p.title, p.body, p.cta, p.tags, p.campaign_id, p.content_type
             FROM social_queue sq
@@ -465,7 +480,7 @@ final class Scheduler
     /** @var resource|null */
     private $lockHandle = null;
 
-    private function acquireLock(): bool
+    private function acquireLock(bool $isRetry = false): bool
     {
         $this->lockHandle = @fopen($this->lockFile, 'c');
         if (!$this->lockHandle) {
@@ -474,10 +489,10 @@ final class Scheduler
         if (!flock($this->lockHandle, LOCK_EX | LOCK_NB)) {
             fclose($this->lockHandle);
             $this->lockHandle = null;
-            // Check for stale lock (older than 5 minutes)
-            if (is_file($this->lockFile) && (time() - filemtime($this->lockFile)) > 300) {
+            // Check for stale lock (older than 5 minutes) - only retry once
+            if (!$isRetry && is_file($this->lockFile) && (time() - filemtime($this->lockFile)) > 300) {
                 @unlink($this->lockFile);
-                return $this->acquireLock();
+                return $this->acquireLock(true);
             }
             return false;
         }
