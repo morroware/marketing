@@ -31,7 +31,9 @@ export function truncate(str, len = 80) {
 }
 
 export function $(id) {
-  return document.getElementById(id);
+  if (!id) return null;
+  const normalized = String(id).startsWith('#') ? String(id).slice(1) : String(id);
+  return document.getElementById(normalized);
 }
 
 export function $$(selector, root = document) {
