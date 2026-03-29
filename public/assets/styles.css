@@ -411,6 +411,18 @@ label {
 .badge-mastodon { background: #6364ff; color: #fff; }
 .badge-tiktok { background: #010101; color: #fff; }
 .badge-youtube { background: #ff0000; color: #fff; }
+.badge-email { background: #7c3aed; color: #fff; }
+.badge-threads { background: #000000; color: #fff; }
+.badge-pinterest { background: #e60023; color: #fff; }
+.badge-reddit { background: #ff4500; color: #fff; }
+.badge-telegram { background: #0088cc; color: #fff; }
+.badge-discord { background: #5865f2; color: #fff; }
+.badge-slack { background: #4a154b; color: #fff; }
+.badge-wordpress { background: #21759b; color: #fff; }
+.badge-medium { background: #000000; color: #fff; }
+.badge-info { background: rgba(76, 141, 255, 0.12); color: var(--accent); }
+.badge-muted { background: var(--bg-tertiary); color: var(--text-muted); }
+.badge-primary { background: var(--accent); color: #fff; }
 
 /* ---- Tabs ---- */
 .tabs {
@@ -3883,10 +3895,9 @@ select {
   margin-bottom: 12px;
 }
 
-/* Badge Variants for Platforms */
+/* Badge Variants for Review Platforms */
 .badge-google { background: #4285f4; color: white; }
 .badge-yelp { background: #d32323; color: white; }
-.badge-facebook { background: #1877f2; color: white; }
 
 /* Fade Slide In Animation */
 @keyframes fadeSlideIn {
@@ -3917,6 +3928,193 @@ select {
     margin-top: 8px;
   }
   #email-intelligence .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================================================
+   AUDIT FIX: Scrollable AI output containers across all pages
+   Ensures long AI-generated text never overflows its container.
+   ================================================================ */
+
+/* Email intelligence, send time, deliverability result containers */
+#emailIntelResults .ai-output,
+#sendTimeResults .ai-output,
+#deliverabilityResults .ai-output {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Analytics AI summary results */
+#aiAnalyticsResults .ai-output {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* Audience/segment AI result */
+#aiAudienceResult {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* Repurpose chain results — scrollable container */
+#repurposeChainResults {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Brain pipeline results */
+#brainPipelineResults {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Brain search results */
+#searchInternalResults,
+#searchWebResults,
+#searchWebsiteResults {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* Compliance results */
+#complianceResults {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* Dashboard AI insights list — scrollable when many insights */
+.ai-insights-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Dashboard action queue — scrollable for long action lists */
+#actionList,
+#actionQueueList {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* Dashboard recent lists — scrollable */
+#recentPosts,
+#recentIdeas {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Contact modal body — ensure scrollable for long contact details */
+#contactModalBody {
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
+/* Ensure all dynamically-created .ai-output elements scroll properly */
+.ai-output {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.ai-output::-webkit-scrollbar { width: 6px; }
+.ai-output::-webkit-scrollbar-track { background: transparent; }
+.ai-output::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+.ai-output::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Smooth scrollbars for all scrollable containers */
+.ai-output-rich,
+.chat-messages,
+.ai-assistant-body,
+.brain-pipeline-output,
+.agent-output-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.ai-output-rich::-webkit-scrollbar,
+.chat-messages::-webkit-scrollbar,
+.ai-assistant-body::-webkit-scrollbar,
+.brain-pipeline-output::-webkit-scrollbar,
+.agent-output-content::-webkit-scrollbar { width: 6px; }
+.ai-output-rich::-webkit-scrollbar-track,
+.chat-messages::-webkit-scrollbar-track,
+.ai-assistant-body::-webkit-scrollbar-track,
+.brain-pipeline-output::-webkit-scrollbar-track,
+.agent-output-content::-webkit-scrollbar-track { background: transparent; }
+.ai-output-rich::-webkit-scrollbar-thumb,
+.chat-messages::-webkit-scrollbar-thumb,
+.ai-assistant-body::-webkit-scrollbar-thumb,
+.brain-pipeline-output::-webkit-scrollbar-thumb,
+.agent-output-content::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+
+/* ================================================================
+   AUDIT FIX: Table layout improvements
+   ================================================================ */
+
+/* Ensure data tables don't break layout with long content */
+.data-table td {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Long text in table cells should wrap but not overflow */
+.data-table td strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ================================================================
+   AUDIT FIX: Form validation error message styling
+   ================================================================ */
+.input-error-msg {
+  color: var(--danger);
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+}
+
+/* ================================================================
+   AUDIT FIX: Modal sizing and scrolling improvements
+   ================================================================ */
+.modal-content {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.modal-body {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ================================================================
+   AUDIT FIX: Empty state styling consistency
+   ================================================================ */
+.empty-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+}
+.empty-state-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+/* ================================================================
+   AUDIT FIX: Better hover states for interactive cards
+   ================================================================ */
+.card:has(button):hover,
+.card:has(a):hover {
+  border-color: var(--accent-subtle, rgba(76, 141, 255, 0.2));
+}
+
+/* ================================================================
+   AUDIT FIX: Settings form grid responsive
+   ================================================================ */
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .row2, .row3, .row4 {
     grid-template-columns: 1fr;
   }
 }
