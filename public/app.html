@@ -1221,6 +1221,8 @@
         <!-- Brain Tabs -->
         <div class="tab-bar brain-tabs mb-1">
           <button class="tab-btn active" data-tab="brain-overview">&#9632; Overview</button>
+          <button class="tab-btn" data-tab="brain-briefing">&#9728; Briefing</button>
+          <button class="tab-btn" data-tab="brain-knowledge">&#128218; Knowledge</button>
           <button class="tab-btn" data-tab="brain-agents">&#129302; Agents</button>
           <button class="tab-btn" data-tab="brain-search">&#128269; Search</button>
           <button class="tab-btn" data-tab="brain-models">&#9881; Models</button>
@@ -1237,6 +1239,16 @@
           <div class="card brain-health-card mt-1">
             <h3 class="mt-0">&#129504; Brain Health</h3>
             <div id="brainHealthScore"></div>
+          </div>
+
+          <!-- Proactive Recommendations -->
+          <div class="card mt-1">
+            <div class="flex-between">
+              <h3 class="mt-0">&#128640; AI Recommendations</h3>
+              <button class="btn btn-ghost btn-sm" id="brainRefreshRecs" title="Refresh recommendations">&#8635;</button>
+            </div>
+            <p class="text-small text-muted mt-0">Smart suggestions based on your marketing data — quick wins, strategic moves, and experiments.</p>
+            <div id="brainRecommendations"></div>
           </div>
 
           <div class="row2 mt-1">
@@ -1260,6 +1272,32 @@
               <p class="text-small text-muted mt-0">Based on your knowledge gaps and recent activity</p>
               <div id="brainQuickActions" class="brain-quick-actions"></div>
             </div>
+          </div>
+        </div>
+
+        <!-- Daily Briefing Tab -->
+        <div class="tab-panel" id="brain-briefing">
+          <div class="card">
+            <div class="flex-between">
+              <div>
+                <h3 class="mt-0">&#9728; Daily Marketing Briefing</h3>
+                <p class="text-small text-muted mt-0">Your AI marketing department's daily rundown — priorities, insights, and focus areas.</p>
+              </div>
+              <div class="flex gap-1">
+                <button class="btn btn-sm btn-outline" id="brainInitializeBtn" title="Re-seed brain from your business profile">&#129504; Initialize Brain</button>
+                <button class="btn btn-ai btn-sm" id="brainRefreshBriefing">&#8635; Refresh</button>
+              </div>
+            </div>
+            <div id="brainBriefingContent"></div>
+          </div>
+        </div>
+
+        <!-- Knowledge Base Tab -->
+        <div class="tab-panel" id="brain-knowledge">
+          <div class="card">
+            <h3 class="mt-0">&#128218; Knowledge Base</h3>
+            <p class="text-small text-muted mt-0">Everything your AI marketing department has learned — accumulated from every tool run, onboarding data, and manual entries. This knowledge powers all AI outputs.</p>
+            <div id="brainKnowledgeContent"></div>
           </div>
         </div>
 

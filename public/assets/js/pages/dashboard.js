@@ -99,13 +99,31 @@ async function loadBrainStatus() {
   const el = $('dashboardBrainStatus');
   if (!el) return;
   try {
-    const data = await api('/api/ai/brain/stats?days=7');
-    const stats = data.item || {};
+    const [statsRes, statusRes] = await Promise.all([
+      api('/api/ai/brain/stats?days=7'),
+      api('/api/ai/brain/status'),
+    ]);
+    const stats = statsRes.item || {};
+    const status = statusRes.item || {};
     const total = stats.total_calls || 0;
+    const learnings = status.total_learnings || 0;
+    const gaps = (status.knowledge_gaps || []).length;
     const byCategory = stats.by_category || [];
+
+    // Calculate brain score inline
+    const lScore = Math.min(40, learnings * 4);
+    const aScore = Math.min(30, total * 1.5);
+    const fScore = Math.min(20, (status.total_feedback || 0) * 5);
+    const cScore = Math.max(0, 10 - gaps * 2);
+    const brainScore = Math.min(100, Math.round(lScore + aScore + fScore + cScore));
+
     el.innerHTML = `
-      <span style="background:var(--input-bg);padding:4px 10px;border-radius:8px;font-size:12px"><strong>${total}</strong> AI calls (7d)</span>
-      ${byCategory.map(c => `<span style="background:var(--input-bg);padding:4px 10px;border-radius:8px;font-size:12px">${escapeHtml(c.tool_category)}: <strong>${c.count}</strong></span>`).join('')}
+      <a href="#brain" class="brain-status-link">
+        <span class="brain-status-score" title="Brain Score">${brainScore}/100</span>
+        <span style="background:var(--input-bg);padding:4px 10px;border-radius:8px;font-size:12px"><strong>${total}</strong> AI calls</span>
+        <span style="background:var(--input-bg);padding:4px 10px;border-radius:8px;font-size:12px"><strong>${learnings}</strong> learnings</span>
+        ${gaps > 0 ? `<span style="background:rgba(239,68,68,0.1);color:#ef4444;padding:4px 10px;border-radius:8px;font-size:12px">${gaps} gaps</span>` : '<span style="background:rgba(34,197,94,0.1);color:#22c55e;padding:4px 10px;border-radius:8px;font-size:12px">Full coverage</span>'}
+      </a>
     `;
   } catch {
     el.innerHTML = '<span class="text-muted text-small">AI Brain loading...</span>';

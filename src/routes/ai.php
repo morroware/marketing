@@ -801,6 +801,63 @@ function register_ai_routes(
         json_response(['item' => ['captured' => $captured]]);
     });
 
+    // Initialize brain from onboarding profile
+    $router->post('/api/ai/brain/initialize', function () use ($memoryEngine, $pdo) {
+        if (!$memoryEngine) { json_response(['error' => 'Memory engine not available'], 500); return; }
+        $profile = $pdo->query("SELECT * FROM business_profile ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        if (!$profile) { json_response(['error' => 'No business profile found. Complete onboarding first.'], 404); return; }
+        $result = $memoryEngine->initializeFromOnboarding($profile);
+        json_response(['item' => $result]);
+    });
+
+    // Daily briefing — smart morning briefing
+    $router->get('/api/ai/brain/briefing', function () use ($memoryEngine) {
+        if (!$memoryEngine) { json_response(['error' => 'Memory engine not available'], 500); return; }
+        $briefing = $memoryEngine->generateDailyBriefing();
+        json_response(['item' => $briefing]);
+    });
+
+    // Proactive recommendations
+    $router->get('/api/ai/brain/recommendations', function () use ($memoryEngine) {
+        if (!$memoryEngine) { json_response(['error' => 'Memory engine not available'], 500); return; }
+        $recs = $memoryEngine->generateProactiveRecommendations();
+        json_response(['items' => $recs]);
+    });
+
+    // Knowledge base
+    $router->get('/api/ai/brain/knowledge', function () use ($memoryEngine) {
+        if (!$memoryEngine) { json_response(['error' => 'Memory engine not available'], 500); return; }
+        $kb = $memoryEngine->getKnowledgeBase();
+        json_response(['item' => $kb]);
+    });
+
+    // Add manual learning
+    $router->post('/api/ai/brain/learnings', function () use ($memoryEngine) {
+        if (!$memoryEngine) { json_response(['error' => 'Memory engine not available'], 500); return; }
+        $p = request_json();
+        if (empty($p['category']) || empty($p['insight'])) {
+            json_response(['error' => 'Missing: category, insight'], 422); return;
+        }
+        $id = $memoryEngine->addManualLearning(
+            $p['category'],
+            $p['insight'],
+            (float)($p['confidence'] ?? 0.85),
+        );
+        json_response(['item' => ['id' => $id]], 201);
+    });
+
+    // Execute a tool by name (for brain/agent programmatic access)
+    $router->post('/api/ai/brain/execute-tool', function () use ($memoryEngine, $contentTools, $analysisTools, $strategyTools) {
+        if (!$memoryEngine) { json_response(['error' => 'Memory engine not available'], 500); return; }
+        $p = request_json();
+        $toolName = $p['tool'] ?? '';
+        $input = $p['input'] ?? [];
+        if ($toolName === '') { json_response(['error' => 'Missing: tool'], 422); return; }
+        $result = $memoryEngine->executeToolByName($toolName, $input, $contentTools, $analysisTools, $strategyTools);
+        if ($result === null) { json_response(['error' => "Tool '{$toolName}' not found or failed"], 404); return; }
+        json_response(['item' => $result]);
+    });
+
     /* ================================================================== */
     /*  AI PIPELINES — Tool chaining & orchestration                       */
     /* ================================================================== */

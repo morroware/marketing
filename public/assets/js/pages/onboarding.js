@@ -80,6 +80,8 @@ export function init() {
           method: 'POST',
           body: JSON.stringify({ onboarding_completed: true }),
         });
+        // Initialize brain even on skip — seeds from whatever profile data exists
+        try { await api('/api/ai/brain/initialize', { method: 'POST' }); } catch (_) {}
         clearDraft();
         navigate('dashboard');
       } catch (err) {
@@ -266,13 +268,22 @@ async function launchAutopilot() {
       body: JSON.stringify(data),
     });
 
+    btn.textContent = 'Initializing AI Brain...';
+
+    // Initialize the AI Brain with onboarding data — seeds foundational learnings
+    try {
+      await api('/api/ai/brain/initialize', { method: 'POST' });
+    } catch (_) {
+      // Brain init is non-critical — continue even if it fails
+    }
+
     btn.textContent = 'Starting AI Autopilot...';
 
     // Queue autopilot pipeline to run in background and continue immediately.
     await api('/api/autopilot/launch', { method: 'POST', body: '{}' });
 
     clearDraft();
-    success('AI Autopilot started! We are generating your marketing foundation in the background.');
+    success('AI Brain initialized and Autopilot started! Your marketing department is being built.');
     navigate('dashboard');
   } catch (err) {
     error('Autopilot error: ' + err.message);

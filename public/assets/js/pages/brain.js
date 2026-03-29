@@ -44,6 +44,15 @@ export function init() {
   $('#modelRoutingProvider')?.addEventListener('change', onProviderChange);
   $('#modelRoutingTaskType')?.addEventListener('change', onTaskTypeChange);
 
+  // Daily briefing
+  $('#brainRefreshBriefing')?.addEventListener('click', loadDailyBriefing);
+  // Recommendations
+  $('#brainRefreshRecs')?.addEventListener('click', loadRecommendations);
+  // Knowledge base - add manual learning
+  $('#brainAddLearningBtn')?.addEventListener('click', addManualLearning);
+  // Brain initialization
+  $('#brainInitializeBtn')?.addEventListener('click', initializeBrain);
+
   // Quick-start action buttons on overview
   document.querySelectorAll('[data-brain-action]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -66,6 +75,8 @@ export async function refresh() {
   showLoadingState();
   await Promise.all([
     loadOverview(),
+    loadDailyBriefing(),
+    loadRecommendations(),
     loadLearnings(),
     loadActivity(),
     loadPipelineTemplates(),
@@ -75,6 +86,7 @@ export async function refresh() {
     loadAgentHistory(),
     loadSearchHistory(),
     loadModelRouting(),
+    loadKnowledgeBase(),
   ]);
 }
 
@@ -1344,6 +1356,303 @@ async function deleteModelRoute() {
     await loadModelRouting();
   } catch (e) {
     error(e.message);
+  }
+}
+
+/* ================================================================== */
+/*  DAILY BRIEFING                                                     */
+/* ================================================================== */
+
+async function loadDailyBriefing() {
+  const el = $('#brainBriefingContent');
+  if (!el) return;
+
+  // Check cache — only regenerate once per 2 hours
+  const cacheKey = 'brain_briefing_' + new Date().toISOString().slice(0, 13);
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    renderBriefing(JSON.parse(cached));
+    return;
+  }
+
+  el.innerHTML = '<div class="brain-loading-pulse">Generating your daily briefing...</div>';
+
+  try {
+    const data = await api('/api/ai/brain/briefing');
+    const briefing = data.item || {};
+    if (briefing.error) {
+      el.innerHTML = `<p class="text-muted text-small">${escapeHtml(briefing.error)}</p>`;
+      return;
+    }
+    sessionStorage.setItem(cacheKey, JSON.stringify(briefing));
+    renderBriefing(briefing);
+  } catch (e) {
+    el.innerHTML = '<p class="text-muted text-small">Briefing unavailable. Use AI tools to build context.</p>';
+  }
+}
+
+function renderBriefing(briefing) {
+  const el = $('#brainBriefingContent');
+  if (!el) return;
+
+  const priorityColors = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
+  const insightIcons = { opportunity: '&#128161;', warning: '&#9888;', celebration: '&#127881;', tip: '&#128218;' };
+
+  el.innerHTML = `
+    ${briefing.greeting ? `<div class="briefing-greeting">${escapeHtml(briefing.greeting)}</div>` : ''}
+
+    ${briefing.priority_actions?.length ? `
+      <div class="briefing-section">
+        <h4 class="briefing-section-title">Priority Actions</h4>
+        <div class="briefing-actions">
+          ${briefing.priority_actions.map((a, i) => `
+            <div class="briefing-action" data-action-idx="${i}">
+              <div class="briefing-action-priority" style="--priority-color:${priorityColors[a.priority] || '#6b7280'}">${a.priority?.toUpperCase()}</div>
+              <div class="briefing-action-content">
+                <strong>${escapeHtml(a.title || '')}</strong>
+                <p class="text-small text-muted mt-0">${escapeHtml(a.description || '')}</p>
+              </div>
+              <button class="btn btn-sm btn-ai briefing-do-btn" data-action-type="${escapeHtml(a.action_type || '')}" data-entity-type="${escapeHtml(a.entity_type || '')}" data-entity-id="${a.entity_id || ''}">Do It</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    ${briefing.insights?.length ? `
+      <div class="briefing-section">
+        <h4 class="briefing-section-title">Insights</h4>
+        ${briefing.insights.map(i => `
+          <div class="briefing-insight">
+            <span class="briefing-insight-icon">${insightIcons[i.type] || '&#128161;'}</span>
+            <span>${escapeHtml(i.message || '')}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+
+    ${briefing.focus_areas?.length ? `
+      <div class="briefing-section">
+        <div class="briefing-focus">
+          <span class="text-small text-muted">Focus today:</span>
+          ${briefing.focus_areas.map(f => `<span class="badge">${escapeHtml(f)}</span>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    ${briefing.brain_growth_tip ? `
+      <div class="briefing-tip">
+        <span>&#129504;</span> <strong>Brain Tip:</strong> ${escapeHtml(briefing.brain_growth_tip)}
+      </div>
+    ` : ''}
+  `;
+
+  // Wire "Do It" buttons
+  el.querySelectorAll('.briefing-do-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const actionType = btn.dataset.actionType;
+      const actionMap = {
+        'publish_draft': 'content', 'review_content': 'content', 'create_content': 'ai',
+        'send_email': 'email', 'check_analytics': 'analytics', 'engage_audience': 'social',
+        'run_campaign': 'campaigns', 'optimize_strategy': 'ai', 'review_scheduled': 'content',
+        'analyze_performance': 'analytics',
+      };
+      navigate(actionMap[actionType] || 'dashboard');
+    });
+  });
+}
+
+/* ================================================================== */
+/*  PROACTIVE RECOMMENDATIONS                                          */
+/* ================================================================== */
+
+async function loadRecommendations() {
+  const el = $('#brainRecommendations');
+  if (!el) return;
+
+  // Cache for 4 hours
+  const cacheKey = 'brain_recs_' + new Date().toISOString().slice(0, 13);
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    renderRecommendations(JSON.parse(cached));
+    return;
+  }
+
+  el.innerHTML = '<div class="brain-loading-pulse">Analyzing your marketing data...</div>';
+
+  try {
+    const data = await api('/api/ai/brain/recommendations');
+    const recs = data.items || [];
+    if (recs.length > 0) {
+      sessionStorage.setItem(cacheKey, JSON.stringify(recs));
+    }
+    renderRecommendations(recs);
+  } catch (e) {
+    el.innerHTML = '<p class="text-muted text-small">Recommendations unavailable.</p>';
+  }
+}
+
+function renderRecommendations(recs) {
+  const el = $('#brainRecommendations');
+  if (!el) return;
+
+  if (!recs.length) {
+    el.innerHTML = '<p class="text-muted text-small">Use more AI tools to get personalized recommendations.</p>';
+    return;
+  }
+
+  const typeIcons = { quick_win: '&#9889;', strategic: '&#128202;', experiment: '&#128300;', optimization: '&#9881;', growth: '&#128640;' };
+  const impactColors = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
+
+  el.innerHTML = recs.map(r => `
+    <div class="rec-card">
+      <div class="rec-header">
+        <span class="rec-type-icon">${typeIcons[r.type] || '&#128161;'}</span>
+        <strong>${escapeHtml(r.title || '')}</strong>
+        <div class="rec-badges">
+          <span class="badge text-small" style="color:${impactColors[r.impact] || '#6b7280'}">${escapeHtml(r.impact || '')} impact</span>
+          <span class="badge text-small">${escapeHtml(r.effort || '')} effort</span>
+        </div>
+      </div>
+      <p class="text-small mt-0">${escapeHtml(r.description || '')}</p>
+      <div class="rec-footer">
+        <span class="badge text-small">${escapeHtml(r.category || '')}</span>
+        ${r.suggested_tool ? `<button class="btn btn-ai btn-sm rec-execute-btn" data-rec-tool="${escapeHtml(r.suggested_tool)}">Run ${escapeHtml(r.suggested_tool)}</button>` : ''}
+        ${r.auto_executable ? '<span class="text-small text-success">&#10003; AI can handle this</span>' : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // Wire execute buttons
+  el.querySelectorAll('.rec-execute-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      navigate('ai');
+    });
+  });
+}
+
+/* ================================================================== */
+/*  KNOWLEDGE BASE                                                     */
+/* ================================================================== */
+
+async function loadKnowledgeBase() {
+  const el = $('#brainKnowledgeContent');
+  if (!el) return;
+
+  try {
+    const data = await api('/api/ai/brain/knowledge');
+    const kb = data.item || {};
+    renderKnowledgeBase(kb);
+  } catch (e) {
+    el.innerHTML = '<p class="text-muted text-small">Knowledge base unavailable.</p>';
+  }
+}
+
+function renderKnowledgeBase(kb) {
+  const el = $('#brainKnowledgeContent');
+  if (!el) return;
+
+  const categories = kb.categories || {};
+  const completeness = kb.knowledge_completeness || {};
+  const allCats = ['audience', 'content', 'strategy', 'performance', 'brand', 'competitor', 'channel', 'timing'];
+
+  el.innerHTML = `
+    <div class="kb-overview">
+      <div class="kb-stat">
+        <span class="kb-stat-value">${kb.total_learnings || 0}</span>
+        <span class="kb-stat-label">Learnings</span>
+      </div>
+      <div class="kb-stat">
+        <span class="kb-stat-value">${kb.total_memories || 0}</span>
+        <span class="kb-stat-label">Memories</span>
+      </div>
+      <div class="kb-stat">
+        <span class="kb-stat-value">${completeness.overall || 0}%</span>
+        <span class="kb-stat-label">Complete</span>
+      </div>
+    </div>
+
+    <div class="kb-categories">
+      ${allCats.map(cat => {
+        const data = categories[cat] || {};
+        const score = completeness[cat] || 0;
+        const count = data.count || 0;
+        const strongest = data.strongest;
+
+        return `
+          <div class="kb-category ${count === 0 ? 'kb-gap' : score >= 60 ? 'kb-strong' : ''}">
+            <div class="kb-cat-header">
+              <span>${categoryEmoji(cat)} <strong>${capitalize(cat)}</strong></span>
+              <span class="kb-cat-score">${score}%</span>
+            </div>
+            <div class="kb-cat-bar"><div class="kb-cat-bar-fill" style="width:${score}%"></div></div>
+            ${count > 0 ? `
+              <div class="text-small text-muted">${count} insight${count !== 1 ? 's' : ''}</div>
+              ${strongest ? `<div class="text-small kb-cat-top">"${escapeHtml(strongest.insight?.substring(0, 100) || '')}"</div>` : ''}
+            ` : '<div class="text-small text-muted">No knowledge yet</div>'}
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <div class="kb-add-learning mt-2">
+      <h4>Teach the Brain</h4>
+      <p class="text-small text-muted">Add knowledge manually — things the AI should always know about your business.</p>
+      <div class="flex gap-1 mb-1">
+        <select id="brainAddLearningCat" class="input" style="width:auto">
+          ${allCats.map(c => `<option value="${c}">${capitalize(c)}</option>`).join('')}
+        </select>
+        <input id="brainAddLearningText" class="input" style="flex:1" placeholder="e.g., Our audience responds best to casual, story-driven content" />
+        <button id="brainAddLearningBtn" class="btn btn-ai btn-sm">Add</button>
+      </div>
+    </div>
+  `;
+
+  // Re-wire the add learning button since it was re-rendered
+  $('#brainAddLearningBtn')?.addEventListener('click', addManualLearning);
+}
+
+async function addManualLearning() {
+  const cat = $('#brainAddLearningCat')?.value;
+  const text = $('#brainAddLearningText')?.value?.trim();
+  if (!cat || !text) { error('Please select a category and enter an insight.'); return; }
+
+  const btn = $('#brainAddLearningBtn');
+  if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+
+  try {
+    await api('/api/ai/brain/learnings', {
+      method: 'POST',
+      body: JSON.stringify({ category: cat, insight: text, confidence: 0.9 }),
+    });
+    success('Knowledge added to the Brain!');
+    if ($('#brainAddLearningText')) $('#brainAddLearningText').value = '';
+    loadKnowledgeBase();
+    loadLearnings();
+  } catch (e) {
+    error('Failed to add learning: ' + e.message);
+  } finally {
+    if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+  }
+}
+
+/* ================================================================== */
+/*  BRAIN INITIALIZATION                                               */
+/* ================================================================== */
+
+async function initializeBrain() {
+  const btn = $('#brainInitializeBtn');
+  if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+
+  try {
+    const data = await api('/api/ai/brain/initialize', { method: 'POST' });
+    const result = data.item || {};
+    success(`Brain initialized! Seeded ${result.seeded || 0} foundational learnings.`);
+    refresh();
+  } catch (e) {
+    error('Initialization failed: ' + e.message);
+  } finally {
+    if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
   }
 }
 

@@ -586,6 +586,544 @@ Return ONLY valid JSON, no markdown fences.";
     }
 
     /* ================================================================== */
+    /*  BRAIN INITIALIZATION — Seed from onboarding data                   */
+    /* ================================================================== */
+
+    /**
+     * Initialize the brain from onboarding profile data.
+     * Seeds foundational learnings so the AI is useful from day one.
+     */
+    public function initializeFromOnboarding(array $profile): array
+    {
+        $seeded = [];
+        $now = gmdate(DATE_ATOM);
+        $neverExpires = gmdate(DATE_ATOM, strtotime('+5 years'));
+
+        // Build foundational learnings from profile data
+        $foundations = [];
+
+        if (!empty($profile['target_audience'])) {
+            $foundations[] = ['audience', "Our target audience is: {$profile['target_audience']}.", 0.95];
+        }
+        if (!empty($profile['products_services'])) {
+            $foundations[] = ['brand', "Our products/services: {$profile['products_services']}.", 0.95];
+        }
+        if (!empty($profile['unique_selling_points'])) {
+            $foundations[] = ['brand', "Our key differentiators: {$profile['unique_selling_points']}.", 0.95];
+        }
+        if (!empty($profile['marketing_goals'])) {
+            $foundations[] = ['strategy', "Primary marketing goals: {$profile['marketing_goals']}.", 0.9];
+        }
+        if (!empty($profile['active_platforms'])) {
+            $foundations[] = ['channel', "Active marketing channels: {$profile['active_platforms']}.", 0.9];
+        }
+        if (!empty($profile['budget_range'])) {
+            $foundations[] = ['strategy', "Marketing budget range: {$profile['budget_range']}.", 0.85];
+        }
+        if (!empty($profile['competitors'])) {
+            $foundations[] = ['competitor', "Known competitors: {$profile['competitors']}.", 0.85];
+        }
+        if (!empty($profile['business_description'])) {
+            $foundations[] = ['brand', "Business overview: " . mb_substr($profile['business_description'], 0, 300), 0.95];
+        }
+
+        foreach ($foundations as [$category, $insight, $confidence]) {
+            if ($this->isDuplicateLearning($insight, $category)) {
+                continue;
+            }
+            $stmt = $this->pdo->prepare("INSERT INTO ai_learnings
+                (category, insight, confidence, source_tool, times_reinforced, expires_at, created_at, updated_at)
+                VALUES (:cat, :insight, :conf, 'onboarding', 3, :expires, :created, :updated)");
+            $stmt->execute([
+                ':cat' => $category,
+                ':insight' => $insight,
+                ':conf' => $confidence,
+                ':expires' => $neverExpires,
+                ':created' => $now,
+                ':updated' => $now,
+            ]);
+            $seeded[] = ['category' => $category, 'insight' => $insight];
+        }
+
+        // If AI is available, also generate strategic insights from the profile
+        if ($this->ai !== null && count($seeded) >= 3) {
+            $profileSummary = json_encode($profile, JSON_UNESCAPED_SLASHES);
+            try {
+                $raw = $this->ai->generateAdvanced(
+                    'You are a senior marketing strategist analyzing a new client profile. Extract 3-5 strategic insights that would guide all future marketing work. Be specific and actionable.',
+                    "Analyze this business profile and extract key strategic marketing insights:\n\n{$profileSummary}\n\nReturn ONLY a JSON array of objects with: category (one of: audience, content, strategy, performance, brand, competitor, channel, timing), insight (1-2 sentences, specific), confidence (0.7-0.95).\nReturn ONLY valid JSON.",
+                    null,
+                    null,
+                    1024,
+                    0.3,
+                );
+                $insights = $this->parseJsonFromResponse($raw);
+                if (is_array($insights)) {
+                    foreach (array_slice($insights, 0, 5) as $i) {
+                        if (empty($i['insight'])) continue;
+                        $cat = $i['category'] ?? 'strategy';
+                        $ins = trim($i['insight']);
+                        if ($this->isDuplicateLearning($ins, $cat)) continue;
+                        $stmt = $this->pdo->prepare("INSERT INTO ai_learnings
+                            (category, insight, confidence, source_tool, times_reinforced, expires_at, created_at, updated_at)
+                            VALUES (:cat, :insight, :conf, 'onboarding-ai', 2, :expires, :created, :updated)");
+                        $stmt->execute([
+                            ':cat' => $cat,
+                            ':insight' => $ins,
+                            ':conf' => max(0.5, min(0.95, (float)($i['confidence'] ?? 0.8))),
+                            ':expires' => $neverExpires,
+                            ':created' => $now,
+                            ':updated' => $now,
+                        ]);
+                        $seeded[] = ['category' => $cat, 'insight' => $ins];
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log("AiMemoryEngine::initializeFromOnboarding AI extraction error: " . $e->getMessage());
+            }
+        }
+
+        $this->logActivity('brain:initialize', 'brain', 'Initialized from onboarding profile', 'Seeded ' . count($seeded) . ' foundational learnings');
+
+        return ['seeded' => count($seeded), 'learnings' => $seeded];
+    }
+
+    /* ================================================================== */
+    /*  DAILY BRIEFING — Smart morning briefing for the user               */
+    /* ================================================================== */
+
+    /**
+     * Generate an AI-powered daily briefing with priorities, insights, and actions.
+     * This is the "what should I focus on today" feature.
+     */
+    public function generateDailyBriefing(): array
+    {
+        if ($this->ai === null) {
+            return ['error' => 'AI service not available'];
+        }
+
+        // Gather comprehensive context
+        $context = $this->gatherBriefingContext();
+
+        $prompt = "Generate a concise daily marketing briefing based on this data.
+
+CURRENT STATE:
+{$context}
+
+Return a JSON object with:
+{
+  \"greeting\": \"Brief motivational opening (1 sentence)\",
+  \"priority_actions\": [
+    {
+      \"priority\": \"high|medium|low\",
+      \"title\": \"Short action title\",
+      \"description\": \"Why this matters and what to do (1-2 sentences)\",
+      \"action_type\": \"publish_draft|review_content|create_content|send_email|check_analytics|engage_audience|run_campaign|optimize_strategy\",
+      \"entity_type\": \"post|campaign|email|null\",
+      \"entity_id\": null
+    }
+  ],
+  \"insights\": [
+    {
+      \"type\": \"opportunity|warning|celebration|tip\",
+      \"message\": \"Specific insight based on real data (1-2 sentences)\"
+    }
+  ],
+  \"focus_areas\": [\"area1\", \"area2\", \"area3\"],
+  \"brain_growth_tip\": \"One specific suggestion to help the AI Brain learn more about the business\"
+}
+
+Rules:
+- 3-6 priority actions, ordered by importance
+- 2-4 insights based on REAL data patterns you can see
+- Be specific — reference actual drafts, campaigns, numbers
+- Don't invent data — only reference what's in the context
+Return ONLY valid JSON.";
+
+        try {
+            $raw = $this->ai->generateAdvanced(
+                $this->ai->buildSystemPrompt('You are the AI marketing department lead providing a daily briefing. Be concise, specific, and actionable. Reference real data.'),
+                $prompt,
+                null,
+                null,
+                2048,
+                0.4,
+            );
+
+            $briefing = $this->parseJsonFromResponse($raw);
+            if (!$briefing || !isset($briefing['priority_actions'])) {
+                return ['error' => 'Failed to parse briefing', 'raw' => mb_substr($raw, 0, 500)];
+            }
+
+            $this->logActivity('brain:briefing', 'brain', 'Generated daily briefing', count($briefing['priority_actions']) . ' actions, ' . count($briefing['insights'] ?? []) . ' insights');
+
+            return $briefing;
+        } catch (\Throwable $e) {
+            return ['error' => 'Briefing generation failed: ' . $e->getMessage()];
+        }
+    }
+
+    private function gatherBriefingContext(): string
+    {
+        $parts = [];
+
+        // Date/time
+        $tz = $this->ai?->getTimezone() ?? 'UTC';
+        $now = new \DateTime('now', new \DateTimeZone($tz));
+        $parts[] = "DATE: " . $now->format('l, F j, Y g:i A') . " ({$tz})";
+
+        // Draft posts needing attention
+        try {
+            $drafts = $this->pdo->query("SELECT id, title, platform, created_at FROM posts WHERE status = 'draft' ORDER BY created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+            if ($drafts) {
+                $parts[] = "DRAFT POSTS (" . count($drafts) . " total):";
+                foreach ($drafts as $d) $parts[] = "- #{$d['id']} \"{$d['title']}\" ({$d['platform']}) created {$d['created_at']}";
+            }
+        } catch (\PDOException $e) {}
+
+        // Scheduled posts (next 48h)
+        try {
+            $scheduled = $this->pdo->query("SELECT id, title, platform, scheduled_for FROM posts WHERE status = 'scheduled' AND scheduled_for IS NOT NULL AND scheduled_for <= datetime('now', '+48 hours') ORDER BY scheduled_for LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+            if ($scheduled) {
+                $parts[] = "UPCOMING SCHEDULED POSTS:";
+                foreach ($scheduled as $s) $parts[] = "- #{$s['id']} \"{$s['title']}\" on {$s['platform']} at {$s['scheduled_for']}";
+            }
+        } catch (\PDOException $e) {}
+
+        // Active campaigns
+        try {
+            $campaigns = $this->pdo->query("SELECT id, name, objective, end_date, budget, spend_to_date FROM campaigns WHERE status = 'active' LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+            if ($campaigns) {
+                $parts[] = "ACTIVE CAMPAIGNS:";
+                foreach ($campaigns as $c) {
+                    $budget = $c['budget'] ? " (budget: \${$c['budget']}, spent: \${$c['spend_to_date']})" : '';
+                    $deadline = $c['end_date'] ? " ends {$c['end_date']}" : '';
+                    $parts[] = "- #{$c['id']} \"{$c['name']}\": {$c['objective']}{$budget}{$deadline}";
+                }
+            }
+        } catch (\PDOException $e) {}
+
+        // Content stats
+        try {
+            $pubCount = (int)$this->pdo->query("SELECT COUNT(*) FROM posts WHERE status = 'published'")->fetchColumn();
+            $draftCount = (int)$this->pdo->query("SELECT COUNT(*) FROM posts WHERE status = 'draft'")->fetchColumn();
+            $schCount = (int)$this->pdo->query("SELECT COUNT(*) FROM posts WHERE status = 'scheduled'")->fetchColumn();
+            $parts[] = "CONTENT STATS: {$pubCount} published, {$draftCount} drafts, {$schCount} scheduled";
+        } catch (\PDOException $e) {}
+
+        // Email campaigns
+        try {
+            $emails = $this->pdo->query("SELECT id, name, status FROM email_campaigns WHERE status IN ('draft', 'scheduled') LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+            if ($emails) {
+                $parts[] = "EMAIL CAMPAIGNS:";
+                foreach ($emails as $e) $parts[] = "- #{$e['id']} \"{$e['name']}\" ({$e['status']})";
+            }
+        } catch (\PDOException $e) {}
+
+        // Subscriber count
+        try {
+            $subs = (int)$this->pdo->query("SELECT COUNT(*) FROM subscribers WHERE status = 'active'")->fetchColumn();
+            if ($subs > 0) $parts[] = "ACTIVE SUBSCRIBERS: {$subs}";
+        } catch (\PDOException $e) {}
+
+        // Recent performance (AI scores)
+        try {
+            $recentPerf = $this->pdo->query("SELECT AVG(ai_score) as avg_score, COUNT(*) as count FROM posts WHERE status = 'published' AND ai_score > 0 AND published_at >= datetime('now', '-7 days')")->fetch(PDO::FETCH_ASSOC);
+            if ($recentPerf && $recentPerf['count'] > 0) {
+                $parts[] = "RECENT PERFORMANCE: {$recentPerf['count']} posts published in 7 days, avg AI score: " . round($recentPerf['avg_score'] ?? 0);
+            }
+        } catch (\PDOException $e) {}
+
+        // AI Brain learnings summary
+        $learnings = $this->getRelevantLearnings(8);
+        if ($learnings) {
+            $parts[] = "TOP AI BRAIN INSIGHTS:";
+            foreach ($learnings as $l) {
+                $parts[] = "- [{$l['category']}] {$l['insight']}";
+            }
+        }
+
+        // Knowledge gaps
+        $reflection = $this->selfReflect();
+        $gaps = $reflection['knowledge_gaps'] ?? [];
+        if ($gaps) {
+            $parts[] = "BRAIN KNOWLEDGE GAPS: " . implode(', ', $gaps);
+        }
+
+        return implode("\n", $parts);
+    }
+
+    /* ================================================================== */
+    /*  PROACTIVE RECOMMENDATIONS — Smart action suggestions               */
+    /* ================================================================== */
+
+    /**
+     * Generate proactive recommendations based on current marketing state.
+     * These are higher-level strategic recommendations vs daily actions.
+     */
+    public function generateProactiveRecommendations(): array
+    {
+        if ($this->ai === null) {
+            return [];
+        }
+
+        $context = $this->gatherBriefingContext();
+        $prompt = "As the AI marketing department, analyze this marketing data and generate 3-5 proactive recommendations. These should be strategic opportunities the business should act on.
+
+{$context}
+
+Return a JSON array of objects with:
+- type: \"quick_win\" | \"strategic\" | \"experiment\" | \"optimization\" | \"growth\"
+- title: Short title (5-8 words)
+- description: What to do and why (2-3 sentences)
+- impact: \"high\" | \"medium\" | \"low\"
+- effort: \"low\" | \"medium\" | \"high\"
+- category: \"content\" | \"email\" | \"social\" | \"campaign\" | \"seo\" | \"audience\"
+- suggested_tool: The AI tool to use (e.g. \"content\", \"research\", \"ideas\", \"persona\", \"calendar-month\", \"seo-keywords\")
+- auto_executable: true if this can be done entirely by AI, false if human input needed
+
+Prioritize quick wins (high impact, low effort). Be specific to this business.
+Return ONLY valid JSON array.";
+
+        try {
+            $raw = $this->ai->generateAdvanced(
+                'You are a proactive AI marketing strategist. Generate specific, actionable recommendations. Prioritize quick wins.',
+                $prompt,
+                null,
+                null,
+                1500,
+                0.5,
+            );
+
+            $recs = $this->parseJsonFromResponse($raw);
+            if (!is_array($recs)) return [];
+
+            $this->logActivity('brain:recommendations', 'brain', 'Generated proactive recommendations', count($recs) . ' recommendations');
+
+            return array_slice($recs, 0, 5);
+        } catch (\Throwable $e) {
+            error_log("AiMemoryEngine::generateProactiveRecommendations error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /* ================================================================== */
+    /*  KNOWLEDGE BASE — Structured, accumulated knowledge                 */
+    /* ================================================================== */
+
+    /**
+     * Get the full knowledge base: learnings + shared memory + performance data,
+     * organized into a structured, queryable format.
+     */
+    public function getKnowledgeBase(): array
+    {
+        $allCategories = ['audience', 'content', 'strategy', 'performance', 'brand', 'competitor', 'channel', 'timing'];
+
+        // Get all learnings grouped by category
+        $learnings = $this->pdo->query(
+            "SELECT category, insight, confidence, times_reinforced, source_tool, created_at
+             FROM ai_learnings
+             WHERE expires_at IS NULL OR expires_at > datetime('now')
+             ORDER BY category, (confidence * (1 + MIN(times_reinforced, 50))) DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $grouped = [];
+        foreach ($allCategories as $cat) {
+            $grouped[$cat] = [
+                'learnings' => [],
+                'count' => 0,
+                'avg_confidence' => 0,
+                'strongest' => null,
+            ];
+        }
+
+        foreach ($learnings as $l) {
+            $cat = $l['category'] ?? 'general';
+            if (!isset($grouped[$cat])) {
+                $grouped[$cat] = ['learnings' => [], 'count' => 0, 'avg_confidence' => 0, 'strongest' => null];
+            }
+            $grouped[$cat]['learnings'][] = $l;
+            $grouped[$cat]['count']++;
+        }
+
+        foreach ($grouped as $cat => &$data) {
+            if ($data['count'] > 0) {
+                $data['avg_confidence'] = array_sum(array_column($data['learnings'], 'confidence')) / $data['count'];
+                $data['strongest'] = $data['learnings'][0] ?? null;
+            }
+        }
+        unset($data);
+
+        // Get shared memories
+        $memories = $this->pdo->query(
+            "SELECT id, memory_key, content, source, category, created_at FROM ai_shared_memory ORDER BY updated_at DESC LIMIT 50"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get performance summary
+        $perfSummary = $this->pdo->query(
+            "SELECT metric_name, AVG(metric_value) as avg_value, COUNT(*) as count
+             FROM ai_performance_feedback
+             GROUP BY metric_name
+             ORDER BY count DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        // Total stats
+        $totalLearnings = array_sum(array_column($grouped, 'count'));
+        $totalMemories = count($memories);
+
+        return [
+            'categories' => $grouped,
+            'shared_memories' => $memories,
+            'performance_summary' => $perfSummary,
+            'total_learnings' => $totalLearnings,
+            'total_memories' => $totalMemories,
+            'knowledge_completeness' => $this->calculateCompleteness($grouped),
+        ];
+    }
+
+    private function calculateCompleteness(array $grouped): array
+    {
+        $scores = [];
+        foreach ($grouped as $cat => $data) {
+            $count = $data['count'];
+            $conf = $data['avg_confidence'];
+            // Score: 0-100 based on count (up to 60) and confidence (up to 40)
+            $countScore = min(60, $count * 8);
+            $confScore = $conf > 0 ? min(40, $conf * 40) : 0;
+            $scores[$cat] = min(100, (int)round($countScore + $confScore));
+        }
+        $scores['overall'] = count($scores) > 0 ? (int)round(array_sum($scores) / count($scores)) : 0;
+        return $scores;
+    }
+
+    /* ================================================================== */
+    /*  SMART LEARNING — Add manual knowledge entries                       */
+    /* ================================================================== */
+
+    /**
+     * Allow users to manually add knowledge to the brain.
+     */
+    public function addManualLearning(string $category, string $insight, float $confidence = 0.85): int
+    {
+        $now = gmdate(DATE_ATOM);
+        $stmt = $this->pdo->prepare("INSERT INTO ai_learnings
+            (category, insight, confidence, source_tool, times_reinforced, expires_at, created_at, updated_at)
+            VALUES (:cat, :insight, :conf, 'manual', 2, :expires, :created, :updated)");
+        $stmt->execute([
+            ':cat' => $category,
+            ':insight' => trim($insight),
+            ':conf' => max(0.3, min(1.0, $confidence)),
+            ':expires' => gmdate(DATE_ATOM, strtotime('+90 days')),
+            ':created' => $now,
+            ':updated' => $now,
+        ]);
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    /**
+     * Execute a specific AI tool by name and return the result.
+     * This allows the brain/agents to run tools programmatically.
+     */
+    public function executeToolByName(
+        string $toolName,
+        array $input,
+        ?AiContentTools $contentTools = null,
+        ?AiAnalysisTools $analysisTools = null,
+        ?AiStrategyTools $strategyTools = null,
+    ): ?array {
+        $toolMap = [
+            'content' => [$contentTools, 'generateContent'],
+            'blog-post' => [$contentTools, 'blogPostGenerator'],
+            'ideas' => [$strategyTools, 'contentIdeas'],
+            'research' => [$strategyTools, 'marketResearch'],
+            'persona' => [$strategyTools, 'audiencePersona'],
+            'competitor-analysis' => [$strategyTools, 'competitorAnalysis'],
+            'social-strategy' => [$strategyTools, 'socialStrategy'],
+            'calendar-month' => [$strategyTools, 'contentCalendarMonth'],
+            'seo-keywords' => [$analysisTools, 'seoKeywordResearch'],
+            'tone-analysis' => [$analysisTools, 'toneAnalysis'],
+            'score' => [$analysisTools, 'contentScore'],
+            'headlines' => [$contentTools, 'headlineOptimizer'],
+            'hashtags' => [$analysisTools, 'hashtagResearch'],
+            'refine' => [$contentTools, 'refineContent'],
+            'smart-times' => [$strategyTools, 'smartPostingTime'],
+            'insights' => [$strategyTools, 'aiInsights'],
+            'brief' => [$contentTools, 'contentBrief'],
+        ];
+
+        if (!isset($toolMap[$toolName])) return null;
+
+        [$service, $method] = $toolMap[$toolName];
+        if ($service === null || !method_exists($service, $method)) return null;
+
+        try {
+            $startTime = microtime(true);
+            $result = $service->$method(...$this->prepareToolArgs($method, $input));
+            $durationMs = (int)((microtime(true) - $startTime) * 1000);
+
+            $this->logActivity(
+                $toolName,
+                $this->getToolCategory($toolName),
+                mb_substr(json_encode($input, JSON_UNESCAPED_SLASHES), 0, 300),
+                mb_substr(is_array($result) ? json_encode($result, JSON_UNESCAPED_SLASHES) : (string)$result, 0, 800),
+                '',
+                '',
+                $durationMs,
+            );
+
+            return is_array($result) ? $result : ['content' => $result];
+        } catch (\Throwable $e) {
+            error_log("AiMemoryEngine::executeToolByName({$toolName}) error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function prepareToolArgs(string $method, array $input): array
+    {
+        // Map common input keys to method parameters
+        switch ($method) {
+            case 'generateContent':
+                return [$input];
+            case 'blogPostGenerator':
+                return [$input['title'] ?? '', $input['keywords'] ?? '', $input['outline'] ?? null];
+            case 'contentIdeas':
+                return [$input['topic'] ?? '', $input['platform'] ?? 'general', (int)($input['count'] ?? 5)];
+            case 'marketResearch':
+                return [$input['focus'] ?? '', $input['audience'] ?? ''];
+            case 'audiencePersona':
+                return [$input['demographics'] ?? '', $input['behaviors'] ?? ''];
+            case 'competitorAnalysis':
+                return [$input['competitor'] ?? '', $input['our_position'] ?? ''];
+            case 'contentScore':
+                return [$input['content'] ?? ''];
+            case 'toneAnalysis':
+                return [$input['content'] ?? ''];
+            case 'headlineOptimizer':
+                return [$input['topic'] ?? '', $input['current'] ?? null];
+            case 'hashtagResearch':
+                return [$input['topic'] ?? '', $input['platform'] ?? 'instagram'];
+            case 'seoKeywordResearch':
+                return [$input['topic'] ?? '', $input['intent'] ?? 'informational'];
+            default:
+                return [$input];
+        }
+    }
+
+    private function getToolCategory(string $toolName): string
+    {
+        $map = [
+            'content' => 'content', 'blog-post' => 'content', 'headlines' => 'content',
+            'refine' => 'content', 'brief' => 'content',
+            'ideas' => 'strategy', 'research' => 'strategy', 'persona' => 'strategy',
+            'social-strategy' => 'strategy', 'calendar-month' => 'strategy', 'insights' => 'strategy',
+            'smart-times' => 'strategy',
+            'competitor-analysis' => 'analysis', 'score' => 'analysis', 'tone-analysis' => 'analysis',
+            'seo-keywords' => 'analysis', 'hashtags' => 'analysis',
+        ];
+        return $map[$toolName] ?? 'general';
+    }
+
+    /* ================================================================== */
     /*  HELPERS                                                            */
     /* ================================================================== */
 

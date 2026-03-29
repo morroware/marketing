@@ -804,6 +804,35 @@ final class Database
         )');
         $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_ai_search_history_created ON ai_search_history(created_at DESC)');
 
+        /* ---- Phase 12: AI Brain Enhancements — Briefings & Recommendations ---- */
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ai_brain_briefings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            briefing_date TEXT NOT NULL,
+            briefing_json TEXT NOT NULL DEFAULT "{}",
+            actions_completed INTEGER DEFAULT 0,
+            actions_total INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        )');
+        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_ai_brain_briefings_date ON ai_brain_briefings(briefing_date DESC)');
+
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ai_brain_recommendations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rec_type TEXT NOT NULL DEFAULT "strategic",
+            title TEXT NOT NULL,
+            description TEXT DEFAULT "",
+            impact TEXT DEFAULT "medium",
+            effort TEXT DEFAULT "medium",
+            category TEXT DEFAULT "content",
+            suggested_tool TEXT DEFAULT "",
+            auto_executable INTEGER DEFAULT 0,
+            status TEXT DEFAULT "pending",
+            executed_at TEXT,
+            result_summary TEXT DEFAULT "",
+            created_at TEXT NOT NULL
+        )');
+        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_ai_brain_recs_status ON ai_brain_recommendations(status, created_at DESC)');
+
         /* ---- Phase 2.5: Review & Reputation Manager ---- */
 
         $this->pdo->exec('CREATE TABLE IF NOT EXISTS reviews (
