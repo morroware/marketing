@@ -1150,10 +1150,8 @@ function register_ai_routes(
         $startDate = $p['start_date'] ?? date('Y-m-d');
         $brainCtx = $memoryEngine ? $memoryEngine->buildBrainContext() : '';
 
-        $bizName = '';
-        try { $bizName = $pdo->query("SELECT value FROM settings WHERE key = 'business_name'")->fetchColumn() ?: ''; } catch (\Exception $e) {}
-        $industry = '';
-        try { $industry = $pdo->query("SELECT value FROM settings WHERE key = 'business_industry'")->fetchColumn() ?: ''; } catch (\Exception $e) {}
+        $bizName = app_config('BUSINESS_NAME', '');
+        $industry = app_config('BUSINESS_INDUSTRY', '');
 
         $days = $period === 'month' ? 28 : 7;
         $prompt = "Create a {$period}ly content calendar starting {$startDate} for a {$industry} business called \"{$bizName}\". Generate {$days} social media posts (1 per day) with variety: mix of promotional, educational, engagement, and storytelling content across platforms (instagram, twitter, linkedin, facebook).\n\nReturn a JSON array of objects with: title, body (the post content), platform, scheduled_for (YYYY-MM-DD HH:MM:SS format, spread across the {$days} days at optimal times), content_type (social_post).\n\n{$brainCtx}\nReturn ONLY valid JSON array.";
@@ -1322,14 +1320,23 @@ function register_ai_routes(
     // Email Intelligence
     $router->post('/api/ai/email-intelligence', function () use ($ai, $pdo, $memoryEngine, $logAi) {
         $brainCtx = $memoryEngine ? $memoryEngine->buildBrainContext() : '';
-        $campaigns = $pdo->query("SELECT name, subject, sent_count, open_count, click_count, sent_at FROM email_campaigns WHERE sent_at IS NOT NULL ORDER BY sent_at DESC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
+        $campaigns = $pdo->query("
+            SELECT ec.id, ec.name, ec.subject, ec.sent_count, ec.sent_at,
+                   COALESCE(SUM(CASE WHEN et.event_type = 'open' THEN 1 ELSE 0 END), 0) AS open_count,
+                   COALESCE(SUM(CASE WHEN et.event_type = 'click' THEN 1 ELSE 0 END), 0) AS click_count
+            FROM email_campaigns ec
+            LEFT JOIN email_tracking et ON et.campaign_id = ec.id
+            WHERE ec.sent_at IS NOT NULL
+            GROUP BY ec.id
+            ORDER BY ec.sent_at DESC LIMIT 20
+        ")->fetchAll(PDO::FETCH_ASSOC);
         $subCount = $pdo->query("SELECT COUNT(*) FROM subscribers WHERE status = 'active'")->fetchColumn();
         $listCount = $pdo->query("SELECT COUNT(*) FROM email_lists")->fetchColumn();
 
         $ctx = "EMAIL DATA:\n- {$subCount} active subscribers across {$listCount} lists\n- Campaign history:\n";
         foreach ($campaigns as $c) {
-            $openRate = ($c['sent_count'] > 0) ? round(($c['open_count'] / $c['sent_count']) * 100, 1) : 0;
-            $clickRate = ($c['sent_count'] > 0) ? round(($c['click_count'] / $c['sent_count']) * 100, 1) : 0;
+            $openRate = ($c['sent_count'] > 0) ? round(((int)$c['open_count'] / (int)$c['sent_count']) * 100, 1) : 0;
+            $clickRate = ($c['sent_count'] > 0) ? round(((int)$c['click_count'] / (int)$c['sent_count']) * 100, 1) : 0;
             $ctx .= "  - \"{$c['name']}\" (Subject: \"{$c['subject']}\") sent:{$c['sent_count']} opens:{$openRate}% clicks:{$clickRate}% on {$c['sent_at']}\n";
         }
 
@@ -1402,8 +1409,7 @@ function register_ai_routes(
     $router->post('/api/ai/seo-opportunities', function () use ($ai, $pdo, $logAi) {
         $p = request_json();
         $topic = trim((string)($p['topic'] ?? ''));
-        $industry = '';
-        try { $industry = $pdo->query("SELECT value FROM settings WHERE key = 'business_industry'")->fetchColumn() ?: ''; } catch (\Exception $e) {}
+        $industry = app_config('BUSINESS_INDUSTRY', '');
         $existingPosts = $pdo->query("SELECT title FROM posts WHERE status = 'published' ORDER BY created_at DESC LIMIT 20")->fetchAll(PDO::FETCH_COLUMN);
 
         $ctx = "Industry: {$industry}\nTopic focus: {$topic}\nExisting content:\n";
