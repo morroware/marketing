@@ -1,17 +1,5 @@
 # Marketing Suite - Project Reference
 
-## Beta Status (March 28, 2026)
-
-Beta audit complete. All beta-blocking bugs have been fixed:
-- Fixed missing `escapeHtml` import in AI Studio JS (caused runtime error on next-actions)
-- Fixed null pointer in `AiAutopilot::recordStepError()` when task row missing
-- Added missing `.input-error` CSS class (broke onboarding validation UX)
-- Added missing `competitor-radar` tool to `AiOrchestrator::executeToolStep()` (pipelines crashed)
-- Fixed null reference on `cm-activity` element in contacts detail modal
-- Added 404 null checks on 9 PUT route handlers (campaigns, segments, templates, brand-profiles, webhooks, email-campaigns, email-templates, rss-feeds, social-accounts)
-
-Remaining hardening items (token encryption, OAuth refresh, distributed locks, etc.) are tracked internally and can follow after initial single-business deployment. Smoke tests should pass for install, auth, content creation, social queue, email send/tracking, forms, and cron.
-
 ## Overview
 
 All-in-one marketing operations platform with deep AI integration. Zero-dependency PHP 8.1+ backend with vanilla JS SPA frontend. SQLite database. No build step, no Composer, no npm.
@@ -84,6 +72,8 @@ src/
   AiChatService.php           # AI Marketing Chat with conversation history, auto-insight extraction
   AiMemoryEngine.php          # AI Brain: activity logging, auto-learning, situational awareness, performance feedback
   AiOrchestrator.php          # AI Pipelines: tool chaining, templates, next-action suggestions
+  AiSearchEngine.php          # Unified search: internal data, web research, website crawl/analysis
+  AiAgentSystem.php           # Multi-agent autonomous tasks: planner, specialized agents, human-in-the-loop
   AiAutopilot.php             # AI Autopilot for onboarding content bootstrapping
   Repositories.php            # Data access layer (Post, Campaign, Competitor, etc.)
   SocialPublisher.php         # Multi-platform publishing (Twitter, Bluesky, Mastodon, Facebook, Instagram)
@@ -106,8 +96,8 @@ src/
   MediaLibrary.php            # File uploads + thumbnails
   RssFetcher.php              # RSS/Atom parser
   Webhooks.php                # Event dispatch + HMAC signing
-  routes/                     # 31 route files (one per API domain)
-    ai.php                    # 26 AI tool endpoints + /api/ai/multi + /api/ai/providers + /api/ai/bulk
+  routes/                     # 32 route files (one per API domain)
+    ai.php                    # AI tool endpoints, brain, pipelines, search, agents, model routing
     posts.php                 # Full CRUD, calendar, bulk ops, approval workflows
     auth.php                  # Login, logout, setup status
     campaigns.php, contacts.php, email.php, etc.
@@ -145,8 +135,8 @@ Methods are split across tool classes, each mapping to `/api/ai/*` endpoints:
 - `rssToPost()` -> `/api/ai/rss-to-post`
 - `emailDripSequence()` -> `/api/ai/drip-sequence`
 - `localizeContent()` -> `/api/ai/localize`
-- `imagePromptGenerator()` -> `/api/ai/image-prompt`
-- `generateImage()` -> `/api/ai/image`
+- `imagePromptGenerator()` -> `/api/ai/image-prompts`
+- `generateImage()` -> `/api/ai/generate-image`
 
 **AiAnalysisTools.php (Analysis):**
 - `toneAnalysis()` -> `/api/ai/tone-analysis` (sentiment, readability, emotion map, brand alignment)
@@ -154,10 +144,10 @@ Methods are split across tool classes, each mapping to `/api/ai/*` endpoints:
 - `seoKeywordResearch()` -> `/api/ai/seo-keywords`
 - `hashtagResearch()` -> `/api/ai/hashtags`
 - `seoAudit()` -> `/api/ai/seo-audit`
-- `preFlightCheck()` -> `/api/ai/pre-flight`
+- `preFlightCheck()` -> `/api/ai/preflight`
 - `predictPerformance()` -> `/api/ai/predict`
-- `generateAbVariants()` -> `/api/ai/ab-variants`
-- `analyzeAbResults()` -> `/api/ai/ab-analysis`
+- `generateAbVariants()` -> `/api/ai/ab-generate`
+- `analyzeAbResults()` -> `/api/ai/ab-analyze`
 
 **AiStrategyTools.php (Strategy):**
 - `marketResearch()` -> `/api/ai/research`
@@ -234,6 +224,9 @@ The AI Brain makes the system self-aware — it learns from its own outputs, tra
 - `ai_performance_feedback` — Content performance metrics linked back to AI activity
 - `ai_pipelines` — Saved pipeline definitions
 - `ai_pipeline_runs` — Pipeline execution history with per-step results
+- `ai_agent_tasks` — Agent task definitions, plans, and execution state
+- `ai_model_routing` — Task type to provider/model mappings
+- `ai_search_history` — Search query history and results
 
 **Context Injection Flow:**
 ```
@@ -256,6 +249,62 @@ buildSystemPrompt() → buildBrainContext() injects:
 - `/api/ai/pipelines/next-actions` — Get suggested next tools
 - `/api/ai/pipelines/runs` — Pipeline run history
 - `/api/ai/pipelines/tools` — Tool registry for frontend
+
+### AI Search Engine (`AiSearchEngine.php`)
+Unified search across multiple data sources with AI-powered synthesis.
+
+- **Internal Search**: Searches across posts, campaigns, contacts, learnings, emails, and other user data
+- **Web Research**: AI-powered web research for market intelligence
+- **Website Crawl/Analysis**: Crawl and analyze specific URLs with SSRF protection
+- **AI Synthesis**: Combines multi-source results into a coherent AI-generated summary
+
+**API Endpoints:**
+- `POST /api/ai/search` — Execute a search (sources: internal, web, website)
+- `GET /api/ai/search/history` — Search history
+
+### AI Agent System (`AiAgentSystem.php`)
+Multi-agent autonomous task system. Users describe a goal in plain English, and a planner agent decomposes it into steps assigned to specialized agents.
+
+**Agent Types:** Researcher, Writer, Analyst, Strategist, Creative
+
+**Features:**
+- **Planning**: Planner agent breaks goals into ordered steps with agent assignments
+- **Human-in-the-Loop**: Approval gates between steps; users can approve, reject (with feedback), or revise
+- **Auto-Approve Mode**: Skip approval gates for trusted workflows
+- **Context Propagation**: Results from each step feed into subsequent steps
+- **Brain Integration**: All agent results feed back into AI Brain context
+
+**API Endpoints:**
+- `GET /api/ai/agents/types` — List available agent types
+- `POST /api/ai/agents/tasks` — Create a new agent task
+- `GET /api/ai/agents/tasks` — List agent tasks
+- `GET /api/ai/agents/tasks/{id}` — Get task details
+- `POST /api/ai/agents/tasks/{id}/execute` — Execute next step
+- `POST /api/ai/agents/tasks/{id}/execute-all` — Execute all remaining steps
+- `POST /api/ai/agents/tasks/{id}/approve` — Approve current step
+- `POST /api/ai/agents/tasks/{id}/reject` — Reject current step with feedback
+- `POST /api/ai/agents/tasks/{id}/cancel` — Cancel task
+
+**Database Tables:**
+- `ai_agent_tasks` — Agent task definitions, plans, and execution state
+
+### Model Routing (`AiService.php`)
+Task-type-based model selection allows routing different AI tasks to different providers/models.
+
+**Task Types:** copywriting, analysis, strategy, research, creative, chat, extraction, image
+
+**Methods:**
+- `getModelForTask(string $taskType)` — Get provider/model for a task type
+- `generateForTask(string $taskType, string $prompt)` — Generate using task-appropriate model
+- `getModelRouting()` / `saveModelRouting()` / `deleteModelRouting()` — CRUD for routing rules
+
+**API Endpoints:**
+- `GET /api/ai/model-routing` — List current routing configuration
+- `POST /api/ai/model-routing` — Save a routing rule
+- `DELETE /api/ai/model-routing/{taskType}` — Delete a routing rule
+
+**Database Tables:**
+- `ai_model_routing` — Task type to provider/model mappings
 
 ## UI/UX Architecture
 
@@ -322,6 +371,12 @@ Button variants: `.btn`, `.btn-ai` (AI purple gradient), `.btn-ghost` (transpare
 - `templates`, `brand_profiles` - Content library
 - `media` - File uploads
 - `webhooks`, `cron_log`, `rss_feeds`, `rss_items`
+- `ai_activity_log`, `ai_learnings`, `ai_performance_feedback` - AI Brain
+- `ai_pipelines`, `ai_pipeline_runs` - AI Pipeline execution
+- `ai_agent_tasks` - AI Agent system
+- `ai_model_routing` - Task-type model routing
+- `ai_search_history` - AI Search history
+- `ai_shared_memory` - Shared AI memory/context
 
 ## Authentication
 
@@ -363,8 +418,9 @@ MISTRAL_API_KEY, MISTRAL_MODEL
 OPENROUTER_API_KEY, OPENROUTER_MODEL
 XAI_API_KEY, XAI_MODEL
 TOGETHER_API_KEY, TOGETHER_MODEL
-APP_URL, MAX_UPLOAD_MB, CRON_KEY
-SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+BANANA_API_KEY, BANANA_BASE_URL, BANANA_MODEL_ID
+APP_URL, APP_FORCE_HTTPS, MAX_UPLOAD_MB, CRON_KEY
+SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_FROM_NAME
 ```
 
 ## Development Notes

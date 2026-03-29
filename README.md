@@ -38,6 +38,8 @@ See **[Configuration](docs/configuration.md)** for full environment variables, S
 | Category | Highlights |
 |----------|-----------|
 | **AI Studio** | 25+ AI tools across content creation, analysis, and strategy with 9 configurable providers |
+| **AI Brain** | Self-learning system: activity logging, auto-extracted insights, performance feedback, situational awareness |
+| **AI Agents** | Multi-agent task system: describe a goal, AI plans and executes with human-in-the-loop approval |
 | **AI Chat** | Conversational AI assistant grounded in your marketing data |
 | **Content Studio** | Post creation, calendar view, approval workflows, bulk operations, recurring posts |
 | **Social Publishing** | 15-platform publishing with queue, optimal timing, and retry logic |
@@ -91,7 +93,7 @@ For scheduled publishing, recurring content, and RSS feed fetching:
 
 | Document | Description |
 |----------|-------------|
-| **[AI System](docs/ai-system.md)** | All 25+ AI tools, providers, Writing Assistant, Chat, Brand Voice |
+| **[AI System](docs/ai-system.md)** | AI tools, providers, Brain, Agents, Search, Pipelines, Writing Assistant, Chat, Brand Voice |
 | **[Content Management](docs/content-management.md)** | Content Studio, calendar, approval workflows, bulk operations |
 | **[Social Publishing](docs/social-publishing.md)** | 15-platform publishing, queue management, optimal timing |
 | **[Email Marketing](docs/email-marketing.md)** | Lists, campaigns, templates, open/click/unsubscribe tracking |

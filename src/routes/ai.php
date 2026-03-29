@@ -228,16 +228,16 @@ function register_ai_routes(
             'posts_total' => (int)($overview['posts']['total'] ?? 0),
             'posts_published' => (int)($overview['posts']['published'] ?? 0),
             'posts_scheduled' => (int)($overview['posts']['scheduled'] ?? 0),
-            'posts_draft' => (int)($overview['posts']['draft'] ?? 0),
+            'posts_draft' => (int)($overview['posts']['drafts'] ?? 0),
             'avg_ai_score' => (int)($overview['posts']['avg_score'] ?? 0),
             'campaigns_count' => count($campaigns->all()),
             'top_platforms' => $overview['by_platform'] ?? [],
-            'content_types' => $overview['by_type'] ?? [],
+            'content_types' => $overview['by_content_type'] ?? [],
             'ai_research_count' => (int)($overview['ai_usage']['research_count'] ?? 0),
             'ai_ideas_count' => (int)($overview['ai_usage']['ideas_count'] ?? 0),
             'email_campaigns' => (int)($overview['email']['campaigns'] ?? 0),
-            'email_sent' => (int)($overview['email']['total_sent'] ?? 0),
-            'social_published' => (int)($overview['social']['total_published'] ?? 0),
+            'email_sent' => (int)($overview['email']['sent'] ?? 0),
+            'social_published' => (int)array_sum(array_column($overview['social_publishing'] ?? [], 'success')),
         ];
         json_response(['item' => $strategyTools->aiInsights($stats)]);
     });
@@ -487,7 +487,7 @@ function register_ai_routes(
             'posts_published' => (int)($overview['posts']['published'] ?? 0),
             'campaigns_active' => count($campaigns->all()),
             'platforms' => $overview['by_platform'] ?? [],
-            'email_sent' => (int)($overview['email']['total_sent'] ?? 0),
+            'email_sent' => (int)($overview['email']['sent'] ?? 0),
         ];
 
         $scheduled = $pdo->query("SELECT title, platform, scheduled_for FROM posts WHERE status = 'scheduled' AND scheduled_for IS NOT NULL ORDER BY scheduled_for ASC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
@@ -1028,10 +1028,10 @@ function register_ai_routes(
     });
 
     /* ================================================================== */
-    /*  PHASE 1-4 ROADMAP ROUTES                                          */
+    /*  EXTENDED AI ROUTES                                                */
     /* ================================================================== */
 
-    // Phase 1.2: Daily Action Queue
+    // Daily Action Queue
     $router->post('/api/ai/daily-actions', function () use ($ai, $pdo, $memoryEngine, $logAi) {
         $brainCtx = $memoryEngine ? $memoryEngine->buildBrainContext() : '';
 
@@ -1063,7 +1063,7 @@ function register_ai_routes(
         json_response(['item' => ['actions' => $actions ?: [], 'raw' => $result]]);
     });
 
-    // Phase 1.3: One-Click Repurpose Chain
+    // One-Click Repurpose Chain
     $router->post('/api/ai/repurpose-chain', function () use ($ai, $memoryEngine, $logAi) {
         $p = request_json();
         $content = trim((string)($p['content'] ?? ''));
@@ -1086,7 +1086,7 @@ function register_ai_routes(
         json_response(['item' => ['variants' => $variants ?: [], 'raw' => $result]]);
     });
 
-    // Phase 1.4: Calendar Auto-Fill
+    // Calendar Auto-Fill
     $router->post('/api/ai/calendar-autofill', function () use ($ai, $pdo, $memoryEngine, $logAi) {
         $p = request_json();
         $period = ($p['period'] ?? 'week') === 'month' ? 'month' : 'week';
@@ -1127,7 +1127,7 @@ function register_ai_routes(
         json_response(['item' => ['posts_created' => $created, 'period' => $period]]);
     });
 
-    // Phase 2.1: Chat Execute (Slash Commands)
+    // Chat Execute (Slash Commands)
     $router->post('/api/ai/chat-execute', function () use ($ai, $pdo, $memoryEngine, $logAi) {
         $p = request_json();
         $command = strtolower(trim((string)($p['command'] ?? '')));
@@ -1206,7 +1206,7 @@ function register_ai_routes(
         json_response(['item' => ['message' => $message, 'created_ids' => $createdIds, 'data' => $data]]);
     });
 
-    // Phase 2.2: Performance Patterns
+    // Performance Patterns
     $router->post('/api/ai/performance-patterns', function () use ($ai, $pdo, $memoryEngine, $logAi) {
         $brainCtx = $memoryEngine ? $memoryEngine->buildBrainContext() : '';
         $posts = $pdo->query("SELECT title, platform, content_type, ai_score, status, created_at FROM posts WHERE status = 'published' ORDER BY created_at DESC LIMIT 50")->fetchAll(PDO::FETCH_ASSOC);
@@ -1224,7 +1224,7 @@ function register_ai_routes(
         json_response(['item' => ['patterns' => $result]]);
     });
 
-    // Phase 2.2: Monthly Review
+    // Monthly Review
     $router->post('/api/ai/monthly-review', function () use ($ai, $pdo, $memoryEngine, $logAi) {
         $p = request_json();
         $days = max(7, min(90, (int)($p['days'] ?? 30)));
@@ -1247,7 +1247,7 @@ function register_ai_routes(
         json_response(['item' => ['review' => $result, 'days' => $days]]);
     });
 
-    // Phase 2.3: Describe Audience (Natural Language → Segment Criteria)
+    // Describe Audience (Natural Language → Segment Criteria)
     $router->post('/api/ai/describe-audience', function () use ($ai, $logAi) {
         $p = request_json();
         $desc = trim((string)($p['description'] ?? ''));
@@ -1262,7 +1262,7 @@ function register_ai_routes(
         json_response(['item' => $parsed ?: ['raw' => $result]]);
     });
 
-    // Phase 2.4: Email Intelligence
+    // Email Intelligence
     $router->post('/api/ai/email-intelligence', function () use ($ai, $pdo, $memoryEngine, $logAi) {
         $brainCtx = $memoryEngine ? $memoryEngine->buildBrainContext() : '';
         $campaigns = $pdo->query("SELECT name, subject, sent_count, open_count, click_count, sent_at FROM email_campaigns WHERE sent_at IS NOT NULL ORDER BY sent_at DESC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
@@ -1283,7 +1283,7 @@ function register_ai_routes(
         json_response(['item' => ['analysis' => $result]]);
     });
 
-    // Phase 2.4: Deliverability Check
+    // Deliverability Check
     $router->post('/api/ai/deliverability-check', function () use ($ai, $logAi) {
         $smtpHost = env_value('SMTP_HOST', '');
         $smtpPort = env_value('SMTP_PORT', '');
@@ -1303,7 +1303,7 @@ function register_ai_routes(
         json_response(['item' => ['analysis' => $result]]);
     });
 
-    // Phase 2.5: AI Review Response
+    // AI Review Response
     $router->post('/api/ai/review-response', function () use ($ai, $logAi) {
         $p = request_json();
         $reviewText = trim((string)($p['review_text'] ?? ''));
@@ -1321,7 +1321,7 @@ function register_ai_routes(
         json_response(['item' => ['response' => $result]]);
     });
 
-    // Phase 4.1: Calendar Intelligence
+    // Calendar Intelligence
     $router->post('/api/ai/calendar-intelligence', function () use ($ai, $pdo, $memoryEngine, $logAi) {
         $brainCtx = $memoryEngine ? $memoryEngine->buildBrainContext() : '';
         $posts = $pdo->query("SELECT platform, content_type, status, scheduled_for, created_at FROM posts WHERE created_at >= datetime('now', '-30 days') ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -1341,7 +1341,7 @@ function register_ai_routes(
         json_response(['item' => ['analysis' => $result]]);
     });
 
-    // Phase 4.2: SEO Opportunities
+    // SEO Opportunities
     $router->post('/api/ai/seo-opportunities', function () use ($ai, $pdo, $logAi) {
         $p = request_json();
         $topic = trim((string)($p['topic'] ?? ''));
@@ -1359,7 +1359,7 @@ function register_ai_routes(
         json_response(['item' => ['opportunities' => $result]]);
     });
 
-    // Phase 4.2: Content Freshness
+    // Content Freshness
     $router->post('/api/ai/content-freshness', function () use ($ai, $pdo, $logAi) {
         $oldPosts = $pdo->query("SELECT id, title, platform, created_at FROM posts WHERE status = 'published' AND created_at <= datetime('now', '-60 days') ORDER BY created_at ASC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1378,7 +1378,7 @@ function register_ai_routes(
         json_response(['item' => ['analysis' => $result]]);
     });
 
-    // Phase 4.5: Compliance Check
+    // Compliance Check
     $router->post('/api/ai/compliance-check', function () use ($ai, $pdo, $logAi) {
         $recentPosts = $pdo->query("SELECT title, body, platform FROM posts WHERE status IN ('draft', 'scheduled') ORDER BY created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
         $hasEmails = $pdo->query("SELECT COUNT(*) FROM email_campaigns")->fetchColumn() > 0;

@@ -30,4 +30,10 @@ function register_rss_routes(Router $router, RssFetcher $rssFetcher): void
         $feedId = !empty($_GET['feed_id']) ? (int)$_GET['feed_id'] : null;
         json_response(['items' => $rssFetcher->allItems(100, $feedId)]);
     });
+
+    $router->patch('/api/rss-items/{id}', function (array $params) use ($rssFetcher) {
+        $rssFetcher->markCurated((int)$params['id']);
+        $item = $rssFetcher->findItem((int)$params['id']);
+        $item ? json_response(['item' => $item]) : json_response(['error' => 'Not found'], 404);
+    });
 }
