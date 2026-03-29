@@ -26,6 +26,8 @@ require $srcDir . '/Webhooks.php';
 require $srcDir . '/RssFetcher.php';
 require $srcDir . '/Scheduler.php';
 
+require $srcDir . '/JobQueue.php';
+
 if (is_file($srcDir . '/SocialPublisher.php')) {
     require $srcDir . '/SocialPublisher.php';
 }
@@ -207,6 +209,24 @@ if (class_exists('SmsService')) {
 
 $automations = new AutomationRepository($pdo, $emailService, $smsService);
 $scheduler->setAutomations($automations);
+
+$jobQueue = new JobQueue($pdo);
+$scheduler->setJobQueue($jobQueue);
+
+// Register job handlers for async processing
+$scheduler->registerJobHandler('email_campaign', function (array $payload) use ($emailService): void {
+    if (!$emailService) {
+        throw new \RuntimeException('Email service not configured');
+    }
+    $result = $emailService->sendCampaign((int) ($payload['campaign_id'] ?? 0));
+    if (!empty($result['errors'])) {
+        // Log errors but don't fail the job if some emails sent successfully
+        error_log('Email campaign errors: ' . implode('; ', $result['errors']));
+    }
+    if ($result['sent'] === 0 && !empty($result['errors'])) {
+        throw new \RuntimeException('Campaign send failed: ' . implode('; ', $result['errors']));
+    }
+});
 
 $socialPublisher = class_exists('SocialPublisher') ? new SocialPublisher($pdo) : null;
 
@@ -451,7 +471,7 @@ if (str_starts_with($path, '/api/')) {
     register_template_routes($router, $templates, $brandProfiles);
     register_media_routes($router, $mediaLib);
     register_social_routes($router, $socialAccounts, $socialPublisher);
-    register_email_routes($router, $emailLists, $subscribers, $emailCampaigns, $emailService, $webhooks, $automations);
+    register_email_routes($router, $emailLists, $subscribers, $emailCampaigns, $emailService, $webhooks, $automations, $jobQueue);
     register_analytics_routes($router, $analytics);
     register_rss_routes($router, $rssFetcher);
     register_webhook_routes($router, $webhooks);

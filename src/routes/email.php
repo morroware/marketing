@@ -9,7 +9,8 @@ function register_email_routes(
     EmailCampaignRepository $emailCampaigns,
     ?EmailService $emailService,
     Webhooks $webhooks,
-    ?AutomationRepository $automations = null
+    ?AutomationRepository $automations = null,
+    ?JobQueue $jobQueue = null
 ): void {
     /* ---- Email Lists ---- */
     $router->get('/api/email-lists', fn() => json_response(['items' => $emailLists->all()]));
@@ -121,10 +122,22 @@ function register_email_routes(
         json_response(['ok' => true]);
     });
 
-    $router->post('/api/email-campaigns/{id}/send', function ($p) use ($emailService, $emailCampaigns, $webhooks, $automations) {
+    $router->post('/api/email-campaigns/{id}/send', function ($p) use ($emailService, $emailCampaigns, $webhooks, $automations, $jobQueue) {
         if (!$emailService) { json_response(['error' => 'Email service not configured'], 500); return; }
         $campaign = $emailCampaigns->find((int)$p['id']);
         if (!$campaign) { json_response(['error' => 'Campaign not found'], 404); return; }
+
+        // Use async job queue if available to prevent HTTP timeout on large lists
+        if ($jobQueue) {
+            $emailCampaigns->update((int)$p['id'], ['status' => 'queued']);
+            $jobId = $jobQueue->push('email_campaign', [
+                'campaign_id' => (int)$p['id'],
+            ], queue: 'email', priority: 10);
+            json_response(['queued' => true, 'job_id' => $jobId, 'message' => 'Campaign queued for sending']);
+            return;
+        }
+
+        // Fallback: send synchronously if no job queue
         $result = $emailService->sendCampaign((int)$p['id']);
         $emailCampaigns->update((int)$p['id'], [
             'status' => 'sent',

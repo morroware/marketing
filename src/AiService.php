@@ -1029,6 +1029,96 @@ final class AiService
         return $decoded;
     }
 
+    /**
+     * Execute multiple HTTP POST requests in parallel using curl_multi.
+     *
+     * This is useful for scenarios like generating multiple AI variants,
+     * running pipeline steps that don't depend on each other, or fetching
+     * from multiple providers simultaneously.
+     *
+     * @param array<int, array{url: string, headers: string[], payload: array}> $requests
+     * @param int $timeout Per-request timeout in seconds
+     * @return array<int, array> Indexed results matching input order, each is the decoded JSON or ['error' => ...]
+     */
+    public function postJsonMulti(array $requests, int $timeout = 120): array
+    {
+        if (empty($requests)) {
+            return [];
+        }
+
+        // Fall back to sequential if curl_multi is not available
+        if (!function_exists('curl_multi_init')) {
+            $results = [];
+            foreach ($requests as $i => $req) {
+                $results[$i] = $this->postJson($req['url'], $req['headers'] ?? [], $req['payload'] ?? [], $timeout);
+            }
+            return $results;
+        }
+
+        $mh = curl_multi_init();
+        $handles = [];
+
+        foreach ($requests as $i => $req) {
+            $ch = curl_init($req['url']);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST           => true,
+                CURLOPT_HTTPHEADER     => array_merge(['Content-Type: application/json'], $req['headers'] ?? []),
+                CURLOPT_POSTFIELDS     => json_encode($req['payload'] ?? []),
+                CURLOPT_TIMEOUT        => $timeout,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+            ]);
+            curl_multi_add_handle($mh, $ch);
+            $handles[$i] = $ch;
+        }
+
+        // Execute all requests concurrently
+        $running = 0;
+        do {
+            $status = curl_multi_exec($mh, $running);
+            if ($status > CURLM_OK) {
+                break;
+            }
+            // Wait for activity instead of busy-looping
+            if ($running > 0) {
+                curl_multi_select($mh, 1.0);
+            }
+        } while ($running > 0);
+
+        // Collect results
+        $results = [];
+        foreach ($handles as $i => $ch) {
+            $raw = curl_multi_getcontent($ch);
+            $error = curl_error($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            if ($raw === null || $raw === false || $error !== '') {
+                $results[$i] = ['error' => 'Network error: ' . ($error ?: 'empty response')];
+            } else {
+                $decoded = json_decode($raw, true);
+                if (!is_array($decoded)) {
+                    $results[$i] = ['error' => "Invalid response from AI provider (HTTP {$httpCode})"];
+                } elseif ($httpCode >= 400) {
+                    $apiError = $decoded['error']['message'] ?? $decoded['error'] ?? "HTTP {$httpCode}";
+                    if (is_array($apiError)) {
+                        $apiError = $apiError['message'] ?? json_encode($apiError);
+                    }
+                    $results[$i] = ['error' => "AI provider error: {$apiError}"];
+                } else {
+                    $results[$i] = $decoded;
+                }
+            }
+
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+        }
+
+        curl_multi_close($mh);
+
+        return $results;
+    }
+
     /* ------------------------------------------------------------------ */
     /*  Helpers                                                           */
     /* ------------------------------------------------------------------ */

@@ -104,7 +104,11 @@ async function refreshEmailCampaigns() {
         if (!await confirm('Send Campaign', 'Send this campaign to all subscribers?', { okText: 'Send', okClass: 'btn-success' })) return;
         try {
           const result = await api(`/api/email-campaigns/${sendBtn.dataset.send}/send`, { method: 'POST' });
-          success(`Sent to ${result.sent || 0} subscribers`);
+          if (result.queued) {
+            success(result.message || 'Campaign queued for sending');
+          } else {
+            success(`Sent to ${result.sent || 0} subscribers`);
+          }
           refreshEmailCampaigns();
         } catch (err) { error(err.message); }
         return;

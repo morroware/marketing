@@ -87,6 +87,97 @@ function app_config(string $key, ?string $default = null): ?string
     return db_setting($key) ?? env_value($key, $default);
 }
 
+/* ------------------------------------------------------------------ */
+/*  Global Error & Exception Handling                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Register global error handlers to capture fatal errors, uncaught exceptions,
+ * and PHP warnings/notices. Logs everything to data/error.log so debugging
+ * on a private network is possible without access to the PHP error log.
+ */
+function register_error_handlers(): void
+{
+    $dataDir = (defined('APP_ROOT') ? APP_ROOT : dirname(__DIR__)) . '/data';
+    if (!is_dir($dataDir)) {
+        @mkdir($dataDir, 0750, true);
+    }
+    $logFile = $dataDir . '/error.log';
+
+    // Convert PHP warnings/notices into ErrorException so they surface cleanly
+    set_error_handler(function (int $severity, string $message, string $file, int $line) use ($logFile): bool {
+        // Honour the error_reporting level (@ operator sets it to 0)
+        if (!(error_reporting() & $severity)) {
+            return false;
+        }
+        $level = match ($severity) {
+            E_WARNING, E_USER_WARNING       => 'WARNING',
+            E_NOTICE, E_USER_NOTICE         => 'NOTICE',
+            E_DEPRECATED, E_USER_DEPRECATED => 'DEPRECATED',
+            default                         => 'ERROR',
+        };
+        $entry = sprintf(
+            "[%s] %s: %s in %s:%d\n",
+            gmdate(DATE_ATOM),
+            $level,
+            $message,
+            $file,
+            $line
+        );
+        @file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX);
+
+        // Throw for actual errors, let notices/deprecations pass through
+        if (in_array($severity, [E_ERROR, E_WARNING, E_USER_ERROR, E_USER_WARNING, E_RECOVERABLE_ERROR], true)) {
+            throw new \ErrorException($message, 0, $severity, $file, $line);
+        }
+        return true;
+    });
+
+    // Uncaught exceptions — log and return a safe JSON response for API calls
+    set_exception_handler(function (\Throwable $e) use ($logFile): void {
+        $entry = sprintf(
+            "[%s] UNCAUGHT %s: %s in %s:%d\nStack trace:\n%s\n\n",
+            gmdate(DATE_ATOM),
+            get_class($e),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine(),
+            $e->getTraceAsString()
+        );
+        @file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX);
+
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json');
+        }
+        echo json_encode(['error' => 'Internal server error'], JSON_PRETTY_PRINT);
+    });
+
+    // Catch fatal errors (out-of-memory, max execution time, etc.)
+    register_shutdown_function(function () use ($logFile): void {
+        $error = error_get_last();
+        if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE], true)) {
+            $entry = sprintf(
+                "[%s] FATAL: %s in %s:%d\n\n",
+                gmdate(DATE_ATOM),
+                $error['message'],
+                $error['file'],
+                $error['line']
+            );
+            @file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX);
+
+            if (!headers_sent()) {
+                http_response_code(500);
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Internal server error'], JSON_PRETTY_PRINT);
+            }
+        }
+    });
+}
+
+// Auto-register error handlers on load
+register_error_handlers();
+
 function json_response(array $payload, int $status = 200): void
 {
     http_response_code($status);
