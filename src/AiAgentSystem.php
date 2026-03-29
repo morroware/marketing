@@ -461,7 +461,8 @@ Return ONLY valid JSON, no markdown fences.";
     /* ================================================================== */
 
     /**
-     * Execute a single agent with full context.
+     * Execute a single agent with full context and optional tool execution.
+     * Agents can now request tool execution via [TOOL:tool_name] tags in their output.
      */
     private function executeAgent(
         string $agentType,
@@ -472,9 +473,23 @@ Return ONLY valid JSON, no markdown fences.";
         ?string $provider,
         ?string $model,
     ): string {
+        $toolList = $this->getAvailableToolsList();
+
         $systemParts = [
             $this->ai->buildSystemPrompt($agentConfig['system_extra']),
         ];
+
+        // Give agents awareness of available tools
+        $systemParts[] = "\nAVAILABLE TOOLS YOU CAN REQUEST:
+To execute an AI tool, include a tool request block in your response:
+[TOOL:tool_name]
+{\"param1\": \"value1\", \"param2\": \"value2\"}
+[/TOOL]
+
+Available tools: {$toolList}
+
+Use tools when they would improve your output quality. The system will execute them and include results.
+You can request up to 2 tools per step. Include tool requests naturally within your response.";
 
         if ($prevContext !== '') {
             $systemParts[] = "\nCONTEXT FROM PREVIOUS STEPS:\n{$prevContext}";
@@ -487,7 +502,7 @@ Return ONLY valid JSON, no markdown fences.";
         $system = implode("\n", $systemParts);
         $temperature = $agentConfig['default_temperature'] ?? 0.7;
 
-        return $this->ai->generateAdvanced(
+        $response = $this->ai->generateAdvanced(
             $system,
             $instruction,
             $provider,
@@ -495,6 +510,76 @@ Return ONLY valid JSON, no markdown fences.";
             4096,
             $temperature,
         );
+
+        // Process any tool requests in the response
+        $response = $this->processToolRequests($response);
+
+        return $response;
+    }
+
+    /**
+     * Parse and execute tool requests embedded in agent output.
+     */
+    private function processToolRequests(string $response): string
+    {
+        $maxTools = 2;
+        $toolsExecuted = 0;
+
+        $response = preg_replace_callback(
+            '/\[TOOL:(\w[\w-]*)\]\s*(\{[^}]*\})\s*\[\/TOOL\]/s',
+            function ($matches) use (&$toolsExecuted, $maxTools) {
+                if ($toolsExecuted >= $maxTools) {
+                    return $matches[0] . "\n[Tool execution skipped — max {$maxTools} tools per step]";
+                }
+
+                $toolName = trim($matches[1]);
+                $paramsJson = trim($matches[2]);
+                $params = json_decode($paramsJson, true) ?: [];
+
+                $result = $this->memoryEngine->executeToolByName(
+                    $toolName,
+                    $params,
+                    $this->contentTools,
+                    $this->analysisTools,
+                    $this->strategyTools,
+                );
+
+                $toolsExecuted++;
+
+                if ($result === null) {
+                    return $matches[0] . "\n[Tool '{$toolName}' not found or failed]";
+                }
+
+                $resultStr = is_array($result)
+                    ? mb_substr(json_encode($result, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT), 0, 2000)
+                    : mb_substr((string)$result, 0, 2000);
+
+                return $matches[0] . "\n\n**Tool Result ({$toolName}):**\n{$resultStr}";
+            },
+            $response
+        );
+
+        return $response;
+    }
+
+    private function getAvailableToolsList(): string
+    {
+        $tools = [
+            'content' => 'Generate marketing content',
+            'blog-post' => 'Write a blog post',
+            'ideas' => 'Generate content ideas',
+            'research' => 'Market research',
+            'persona' => 'Create audience persona',
+            'competitor-analysis' => 'Analyze a competitor',
+            'score' => 'Score content quality',
+            'tone-analysis' => 'Analyze content tone',
+            'seo-keywords' => 'SEO keyword research',
+            'headlines' => 'Generate headline variations',
+            'hashtags' => 'Research hashtags',
+            'smart-times' => 'Optimal posting times',
+        ];
+
+        return implode(', ', array_map(fn($k, $v) => "{$k} ({$v})", array_keys($tools), $tools));
     }
 
     /**
