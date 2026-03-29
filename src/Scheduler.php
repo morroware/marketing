@@ -8,6 +8,9 @@ final class Scheduler
 
     private ?AutomationRepository $automations = null;
     private ?SocialQueue $queue = null;
+    private ?JobQueue $jobQueue = null;
+    /** @var array<string, callable> */
+    private array $jobHandlers = [];
 
     public function __construct(
         private PDO $pdo,
@@ -27,6 +30,19 @@ final class Scheduler
         $this->queue = $queue;
     }
 
+    public function setJobQueue(JobQueue $jobQueue): void
+    {
+        $this->jobQueue = $jobQueue;
+    }
+
+    /**
+     * Register a handler for a job type. Called during app bootstrap.
+     */
+    public function registerJobHandler(string $type, callable $handler): void
+    {
+        $this->jobHandlers[$type] = $handler;
+    }
+
     /**
      * Main cron entry point. Returns summary of actions taken.
      */
@@ -38,6 +54,8 @@ final class Scheduler
             'queue_published' => 0,
             'recurring_created' => 0,
             'rss_fetched' => 0,
+            'jobs_processed' => 0,
+            'jobs_failed' => 0,
             'errors' => [],
         ];
 
@@ -68,6 +86,14 @@ final class Scheduler
 
             // 4. Fetch RSS feeds (if RssFetcher is available)
             $summary['rss_fetched'] = $this->fetchRssFeeds();
+
+            // 5. Process async job queue
+            $jobResult = $this->processJobQueue();
+            $summary['jobs_processed'] = $jobResult['processed'];
+            $summary['jobs_failed'] = $jobResult['failed'];
+            if ($jobResult['errors']) {
+                $summary['errors'] = array_merge($summary['errors'], $jobResult['errors']);
+            }
 
             $this->logRun('cron', 'success', json_encode($summary));
         } catch (\Throwable $e) {
@@ -410,6 +436,27 @@ final class Scheduler
         }
 
         return ['count' => $count, 'errors' => $errors];
+    }
+
+    /**
+     * Process pending jobs from the async queue.
+     */
+    private function processJobQueue(): array
+    {
+        if (!$this->jobQueue || empty($this->jobHandlers)) {
+            return ['processed' => 0, 'failed' => 0, 'errors' => []];
+        }
+
+        // Recover any jobs stuck in "processing" from a crashed previous run
+        $this->jobQueue->recoverStale(300);
+
+        // Process up to 20 jobs per cron tick
+        $result = $this->jobQueue->process($this->jobHandlers, limit: 20);
+
+        // Purge completed jobs older than 7 days
+        $this->jobQueue->purgeOld(7);
+
+        return $result;
     }
 
     /* ---- lock ---- */

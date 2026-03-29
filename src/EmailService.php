@@ -153,56 +153,8 @@ class EmailService
         }
 
         try {
-            // Read server greeting
-            $this->smtpCommand($socket, '', 220);
-
-            // EHLO
-            $this->smtpCommand($socket, 'EHLO ' . gethostname(), 250);
-
-            // STARTTLS for submission port
-            if ($this->smtpPort === 587) {
-                $this->smtpStartTls($socket);
-                // Re-issue EHLO after TLS
-                $this->smtpCommand($socket, 'EHLO ' . gethostname(), 250);
-            }
-
-            // Authenticate
-            if ($this->smtpUser !== '' && $this->smtpPass !== '') {
-                $this->smtpAuthenticate($socket, $this->smtpUser, $this->smtpPass);
-            }
-
-            // MAIL FROM
-            $this->smtpCommand($socket, "MAIL FROM:<{$this->smtpFrom}>", 250);
-
-            // RCPT TO
-            $this->smtpCommand($socket, "RCPT TO:<{$to}>", 250);
-
-            // DATA
-            $this->smtpCommand($socket, 'DATA', 354);
-
-            // Build the full message
-            $boundary = 'boundary_' . bin2hex(random_bytes(16));
-            $headerBlock = $this->buildHeaders($to, $toName, $subject, $boundary, $headers);
-            $mimeBody = $this->buildMimeMessage($htmlBody, $textBody, $boundary);
-
-            $message = $headerBlock . "\r\n" . $mimeBody;
-
-            // Dot-stuffing: any line beginning with a dot must be doubled (RFC 5321 4.5.2)
-            $lines = explode("\r\n", $message);
-            $stuffed = [];
-            foreach ($lines as $line) {
-                if (isset($line[0]) && $line[0] === '.') {
-                    $line = '.' . $line;
-                }
-                $stuffed[] = $line;
-            }
-            $message = implode("\r\n", $stuffed);
-
-            // Send message data followed by terminating sequence
-            fwrite($socket, $message . "\r\n.\r\n");
-
-            // Read DATA response
-            $this->smtpCommand($socket, '', 250);
+            $this->smtpHandshake($socket);
+            $this->smtpSendMessage($socket, $to, $toName, $subject, $htmlBody, $textBody, $headers);
 
             // QUIT
             $this->smtpCommand($socket, 'QUIT', 221);
@@ -213,6 +165,82 @@ class EmailService
                 fclose($socket);
             }
         }
+    }
+
+    /**
+     * Perform the SMTP handshake: EHLO, STARTTLS, AUTH.
+     * Separated so bulk sends can reuse the same authenticated connection.
+     *
+     * @param resource $socket
+     */
+    private function smtpHandshake($socket): void
+    {
+        // Read server greeting
+        $this->smtpCommand($socket, '', 220);
+
+        // EHLO
+        $this->smtpCommand($socket, 'EHLO ' . gethostname(), 250);
+
+        // STARTTLS for submission port
+        if ($this->smtpPort === 587) {
+            $this->smtpStartTls($socket);
+            // Re-issue EHLO after TLS
+            $this->smtpCommand($socket, 'EHLO ' . gethostname(), 250);
+        }
+
+        // Authenticate
+        if ($this->smtpUser !== '' && $this->smtpPass !== '') {
+            $this->smtpAuthenticate($socket, $this->smtpUser, $this->smtpPass);
+        }
+    }
+
+    /**
+     * Send a single message on an already-authenticated SMTP socket.
+     * Uses RSET between messages to reuse the connection (RFC 5321 §4.1.1.5).
+     *
+     * @param resource $socket
+     */
+    private function smtpSendMessage(
+        $socket,
+        string $to,
+        string $toName,
+        string $subject,
+        string $htmlBody,
+        string $textBody,
+        array $headers = []
+    ): void {
+        // MAIL FROM
+        $this->smtpCommand($socket, "MAIL FROM:<{$this->smtpFrom}>", 250);
+
+        // RCPT TO
+        $this->smtpCommand($socket, "RCPT TO:<{$to}>", 250);
+
+        // DATA
+        $this->smtpCommand($socket, 'DATA', 354);
+
+        // Build the full message
+        $boundary = 'boundary_' . bin2hex(random_bytes(16));
+        $headerBlock = $this->buildHeaders($to, $toName, $subject, $boundary, $headers);
+        $mimeBody = $this->buildMimeMessage($htmlBody, $textBody, $boundary);
+
+        $message = $headerBlock . "\r\n" . $mimeBody;
+
+        // Dot-stuffing: any line beginning with a dot must be doubled (RFC 5321 4.5.2)
+        $lines = explode("\r\n", $message);
+        $stuffed = [];
+        foreach ($lines as $line) {
+            if (isset($line[0]) && $line[0] === '.') {
+                $line = '.' . $line;
+            }
+            $stuffed[] = $line;
+        }
+        $message = implode("\r\n", $stuffed);
+
+        // Send message data followed by terminating sequence
+        fwrite($socket, $message . "\r\n.\r\n");
+
+        // Read DATA response
+        $this->smtpCommand($socket, '', 250);
     }
 
     // =========================================================================
@@ -331,6 +359,24 @@ class EmailService
                 return $stats;
             }
 
+            // Open a single SMTP connection and reuse it for all subscribers.
+            // This avoids the overhead of connect/TLS/auth per email, which is
+            // critical when sending to hundreds of subscribers.
+            $socket = $this->smtpConnect();
+            if ($socket === false) {
+                $stats['errors'][] = "SMTP: Unable to connect to {$this->smtpHost}:{$this->smtpPort}";
+                return $stats;
+            }
+
+            $socketOpen = true;
+            try {
+                $this->smtpHandshake($socket);
+            } catch (\Throwable $e) {
+                $stats['errors'][] = "SMTP handshake failed: {$e->getMessage()}";
+                if (is_resource($socket)) { fclose($socket); }
+                return $stats;
+            }
+
             foreach ($subscribers as $subscriber) {
                 try {
                     $htmlBody = $this->processMergeTags(
@@ -344,7 +390,8 @@ class EmailService
                         $campaignId
                     );
 
-                    $success = $this->sendSmtp(
+                    $this->smtpSendMessage(
+                        $socket,
                         $subscriber['email'],
                         $subscriber['name'] ?? '',
                         $campaign['subject'],
@@ -353,17 +400,39 @@ class EmailService
                         ['List-Unsubscribe' => '<' . $this->getUnsubscribeUrl((int) $subscriber['id'], (int) $campaign['list_id']) . '>']
                     );
 
-                    if ($success) {
-                        $stats['sent']++;
-                        $this->recordSend($campaignId, (int) $subscriber['id']);
-                    } else {
-                        $stats['failed']++;
-                        $stats['errors'][] = "Failed to send to {$subscriber['email']}: unknown error.";
-                    }
+                    $stats['sent']++;
+                    $this->recordSend($campaignId, (int) $subscriber['id']);
+
+                    // RSET to reset the envelope for the next message on the same connection
+                    $this->smtpCommand($socket, 'RSET', 250);
                 } catch (\Throwable $e) {
                     $stats['failed']++;
                     $stats['errors'][] = "Failed to send to {$subscriber['email']}: {$e->getMessage()}";
+
+                    // If the connection died, try to reconnect once
+                    if (!is_resource($socket)) {
+                        $socket = $this->smtpConnect();
+                        if ($socket === false) {
+                            $stats['errors'][] = 'SMTP reconnect failed — aborting remaining sends.';
+                            $socketOpen = false;
+                            break;
+                        }
+                        try {
+                            $this->smtpHandshake($socket);
+                        } catch (\Throwable $reconErr) {
+                            $stats['errors'][] = 'SMTP re-handshake failed: ' . $reconErr->getMessage();
+                            if (is_resource($socket)) { fclose($socket); }
+                            $socketOpen = false;
+                            break;
+                        }
+                    }
                 }
+            }
+
+            // Gracefully close the persistent connection
+            if ($socketOpen && is_resource($socket)) {
+                try { $this->smtpCommand($socket, 'QUIT', 221); } catch (\Throwable) {}
+                fclose($socket);
             }
 
             // Update campaign status and sent_count
