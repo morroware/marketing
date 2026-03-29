@@ -580,14 +580,17 @@ final class AiService
                 $imageProvider = 'banana';
             } elseif (!empty($this->config['openai_api_key'])) {
                 $imageProvider = 'openai';
+            } elseif (!empty($this->config['gemini_api_key'])) {
+                $imageProvider = 'gemini';
             } else {
-                return ['error' => 'No image generation provider configured. Add BANANA_API_KEY or OPENAI_API_KEY to .env.'];
+                return ['error' => 'No image generation provider configured. Add BANANA_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY to .env.'];
             }
         }
 
         return match ($imageProvider) {
             'banana' => $this->callBananaImage($prompt, $size),
             'openai' => $this->callDallE($prompt, $size),
+            'gemini' => $this->callGeminiImage($prompt, $size),
             default  => ['error' => "Unknown image provider: {$imageProvider}"],
         };
     }
@@ -769,10 +772,11 @@ final class AiService
 
         $usedModel = $model ?? $this->config['anthropic_model'] ?? 'claude-sonnet-4-6';
         $payload = [
-            'model'      => $usedModel,
-            'max_tokens' => $maxTokens,
-            'system'     => $system,
-            'messages'   => [['role' => 'user', 'content' => $prompt]],
+            'model'       => $usedModel,
+            'max_tokens'  => $maxTokens,
+            'temperature' => $temperature,
+            'system'      => $system,
+            'messages'    => [['role' => 'user', 'content' => $prompt]],
         ];
 
         $data = $this->postJson('https://api.anthropic.com/v1/messages', [
@@ -977,6 +981,48 @@ final class AiService
         }
 
         return ['error' => 'No image returned from DALL-E'];
+    }
+
+    private function callGeminiImage(string $prompt, string $size = '1024x1024'): array
+    {
+        if (empty($this->config['gemini_api_key'])) {
+            return ['error' => 'GEMINI_API_KEY required for Gemini Imagen image generation'];
+        }
+
+        $model = 'imagen-3.0-generate-002';
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':predict?key=' . $this->config['gemini_api_key'];
+
+        $payload = [
+            'instances' => [['prompt' => $prompt]],
+            'parameters' => [
+                'sampleCount' => 1,
+                'aspectRatio' => '1:1',
+            ],
+        ];
+
+        // Map size to aspect ratio
+        if ($size === '1024x1792' || $size === '768x1344') {
+            $payload['parameters']['aspectRatio'] = '9:16';
+        } elseif ($size === '1792x1024' || $size === '1344x768') {
+            $payload['parameters']['aspectRatio'] = '16:9';
+        }
+
+        $data = $this->postJson($url, [], $payload, 90);
+
+        if (isset($data['error'])) {
+            return ['error' => 'Gemini Imagen: ' . (is_string($data['error']) ? $data['error'] : ($data['error']['message'] ?? json_encode($data['error'])))];
+        }
+
+        $b64 = $data['predictions'][0]['bytesBase64Encoded'] ?? null;
+        if ($b64) {
+            return [
+                'image_base64' => $b64,
+                'provider'     => 'gemini_imagen',
+                'prompt'       => $prompt,
+            ];
+        }
+
+        return ['error' => 'No image returned from Gemini Imagen'];
     }
 
     /* ------------------------------------------------------------------ */

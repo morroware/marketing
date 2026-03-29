@@ -341,6 +341,20 @@ export async function refresh() {
     const { items } = await api('/api/posts');
     renderCalendar(items);
   } catch (err) { error('Failed to load calendar: ' + err.message); }
+
+  // Check for AI-generated content from AI Studio "Use in Post"
+  const stored = sessionStorage.getItem('ai_generated_content');
+  if (stored) {
+    sessionStorage.removeItem('ai_generated_content');
+    sessionStorage.removeItem('ai_generated_tool');
+    // Switch to create tab and populate the body field
+    document.querySelector('[data-tab="content-create"]')?.click();
+    const bodyField = document.querySelector('#postForm [name="body"]');
+    if (bodyField) {
+      bodyField.value = stored;
+      bodyField.dispatchEvent(new Event('input'));
+    }
+  }
 }
 
 export function init() {
@@ -677,19 +691,6 @@ export function init() {
   // ---- Live Platform Preview & Character Counter ----
   initLivePreview();
 
-  // Check for AI-generated content from AI Studio "Use in Post"
-  const stored = sessionStorage.getItem('ai_generated_content');
-  if (stored) {
-    sessionStorage.removeItem('ai_generated_content');
-    sessionStorage.removeItem('ai_generated_tool');
-    // Switch to create tab and populate the body field
-    document.querySelector('[data-tab="content-create"]')?.click();
-    const bodyField = document.querySelector('#postForm [name="body"]');
-    if (bodyField) {
-      bodyField.value = stored;
-      bodyField.dispatchEvent(new Event('input'));
-    }
-  }
 }
 
 /* ---- Live Platform Preview ---- */

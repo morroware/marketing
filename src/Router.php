@@ -73,8 +73,8 @@ final class Router
             // Escape the pattern for regex safety, then restore {param} placeholders
             $escaped = preg_quote($pattern, '#');
             $regex = preg_replace('#\\\\\\{(\\w+)\\\\\\}#', '(?P<$1>[^/]+)', $escaped);
-            if ($regex === $escaped) {
-                continue; // no params, already tried exact match above
+            if ($regex === null || $regex === $escaped) {
+                continue; // null = preg error, or no params (already tried exact match above)
             }
             if (preg_match('#^' . $regex . '$#D', $path, $matches)) {
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
@@ -117,7 +117,7 @@ final class Router
 
         $escaped = preg_quote($pattern, '#');
         $regex = preg_replace('#\\\\\\{(\\w+)\\\\\\}#', '(?P<$1>[^/]+)', $escaped);
-        if ($regex === $escaped) {
+        if ($regex === null || $regex === $escaped) {
             return false;
         }
 

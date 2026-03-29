@@ -34,7 +34,7 @@ $defaults = [
     'BUSINESS_INDUSTRY' => 'Local services',
     'TIMEZONE' => 'America/New_York',
     'AI_PROVIDER' => 'openai',
-    'AI_MODEL' => 'gpt-4.1-mini',
+    'OPENAI_MODEL' => 'gpt-4.1-mini',
     'OPENAI_API_KEY' => '',
     'OPENAI_BASE_URL' => 'https://api.openai.com/v1',
     'ANTHROPIC_API_KEY' => '',
@@ -418,8 +418,8 @@ if ($installed) {
         </select>
       </div>
       <div>
-        <label for="AI_MODEL">OpenAI model</label>
-        <input id="AI_MODEL" name="AI_MODEL" value="<?= esc($values['AI_MODEL']) ?>" />
+        <label for="OPENAI_MODEL">OpenAI model</label>
+        <input id="OPENAI_MODEL" name="OPENAI_MODEL" value="<?= esc($values['OPENAI_MODEL']) ?>" />
       </div>
       <div class="full">
         <label for="OPENAI_API_KEY">OpenAI API key</label>
@@ -515,7 +515,7 @@ if ($installed) {
       </div>
       <div>
         <label for="SMTP_PASS">SMTP password</label>
-        <input id="SMTP_PASS" name="SMTP_PASS" type="password" value="<?= esc($values['SMTP_PASS']) ?>" />
+        <input id="SMTP_PASS" name="SMTP_PASS" type="password" value="<?= esc($displayValues['SMTP_PASS']) ?>" />
       </div>
       <div>
         <label for="SMTP_FROM">From email</label>

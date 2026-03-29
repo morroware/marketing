@@ -102,12 +102,12 @@ final class SegmentRepository
             }
         }
 
-        if (!empty($criteria['min_score'])) {
+        if (isset($criteria['min_score']) && $criteria['min_score'] !== '' && $criteria['min_score'] !== null) {
             $where[] = 'score >= :min_score';
             $params[':min_score'] = (int)$criteria['min_score'];
         }
 
-        if (!empty($criteria['max_score'])) {
+        if (isset($criteria['max_score']) && $criteria['max_score'] !== '' && $criteria['max_score'] !== null) {
             $where[] = 'score <= :max_score';
             $params[':max_score'] = (int)$criteria['max_score'];
         }
@@ -193,8 +193,8 @@ final class SegmentRepository
                 $params[':stage'] = $criteria['stage'];
             }
         }
-        if (!empty($criteria['min_score'])) { $where[] = 'score >= :min_score'; $params[':min_score'] = (int)$criteria['min_score']; }
-        if (!empty($criteria['max_score'])) { $where[] = 'score <= :max_score'; $params[':max_score'] = (int)$criteria['max_score']; }
+        if (isset($criteria['min_score']) && $criteria['min_score'] !== '' && $criteria['min_score'] !== null) { $where[] = 'score >= :min_score'; $params[':min_score'] = (int)$criteria['min_score']; }
+        if (isset($criteria['max_score']) && $criteria['max_score'] !== '' && $criteria['max_score'] !== null) { $where[] = 'score <= :max_score'; $params[':max_score'] = (int)$criteria['max_score']; }
         if (!empty($criteria['tags'])) {
             $tags = is_array($criteria['tags']) ? $criteria['tags'] : explode(',', $criteria['tags']);
             foreach ($tags as $i => $tag) { $key = ":tag_{$i}"; $where[] = "tags LIKE {$key}"; $params[$key] = '%' . trim($tag) . '%'; }

@@ -75,10 +75,11 @@ final class EmailTemplateRepository
         $subject = $tpl['subject_template'];
 
         foreach ($vars as $key => $value) {
+            $strValue = is_scalar($value) ? (string)$value : json_encode($value);
             $tag = '{{' . $key . '}}';
-            $html = str_replace($tag, htmlspecialchars($value, ENT_QUOTES, 'UTF-8'), $html);
-            $text = str_replace($tag, $value, $text);
-            $subject = str_replace($tag, $value, $subject);
+            $html = str_replace($tag, htmlspecialchars($strValue, ENT_QUOTES, 'UTF-8'), $html);
+            $text = str_replace($tag, $strValue, $text);
+            $subject = str_replace($tag, $strValue, $subject);
         }
 
         return ['subject' => $subject, 'html' => $html, 'text' => $text];

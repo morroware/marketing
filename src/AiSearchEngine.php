@@ -94,8 +94,8 @@ final class AiSearchEngine
 
         // Search campaigns
         $campaigns = $this->searchTable(
-            'campaigns', ['name', 'description', 'objective', 'target_audience'], $keywords, $limit,
-            'id, name, description, objective, status, created_at',
+            'campaigns', ['name', 'notes', 'objective', 'target_audience'], $keywords, $limit,
+            'id, name, notes, objective, status, created_at',
             'campaign'
         );
         $results = array_merge($results, $campaigns);
@@ -135,8 +135,8 @@ final class AiSearchEngine
         // Search content ideas (if table exists)
         try {
             $ideas = $this->searchTable(
-                'content_ideas', ['title', 'description', 'notes'], $keywords, $limit,
-                'id, title, description, status, created_at',
+                'content_ideas', ['topic', 'output'], $keywords, $limit,
+                'id, topic, output, platform, created_at',
                 'idea'
             );
             $results = array_merge($results, $ideas);
